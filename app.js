@@ -158,10 +158,11 @@ function selectTab(kind) { document.querySelectorAll('.tab').forEach(button => b
 function openDetail(id) {
   const item = [...extra,...listings].find(row=>Number(row.id)===Number(id)); if (!item) return;
   const memberItem = Boolean(item.sellerId);
+  const ownListing = memberItem && currentUser && Number(currentUser.id)===Number(item.sellerId);
   showModal(`<div class="modalhead"><div><div class="eyebrow">${esc(item.kind)} · ${esc(item.category)}</div><h2>${esc(item.title)}</h2><p>Listed by ${esc(item.seller)} · ${esc(item.condition)}</p></div><button class="close" onclick="closeModal()">×</button></div>
     <div class="art detail-art" style="height:220px;border-radius:14px;background:${esc(item.art)};margin-bottom:18px">${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}</div>
     <p style="font-size:13px;line-height:1.7;color:#667269">${esc(item.description)}</p><div class="detailprice">${price(item.price)} <small>${schoolOptions.includes(item.place)?`School: ${esc(item.place)}`:esc(item.place)}</small></div>
-    ${memberItem?'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" style="width:100%;margin-top:9px" onclick="openConversation('+Number(item.id)+','+Number(item.sellerId)+')">Message seller</button>':'<button class="primary" disabled title="Member checkout becomes available after a member lists this item">Member checkout unavailable on sample listings</button>'}
+    ${memberItem?(ownListing?'<div class="empty" style="padding:12px;margin-bottom:9px">This is your listing. Buyer messages appear in your inbox.</div><button class="filterbtn" style="width:100%" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" style="width:100%;margin-top:9px" onclick="openConversation('+Number(item.id)+','+Number(item.sellerId)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout becomes available after a member lists this item">Member checkout unavailable on sample listings</button>'}
     ${item.trade?`<button class="filterbtn" style="width:100%;margin-top:9px" onclick="openTrade(${Number(item.id)})">↔ Make a trade offer</button>`:''}`);
 }
 async function startCheckout(listingId) {
@@ -219,8 +220,14 @@ async function openConversation(listingId, otherId) {
     const {messages} = await request(`/api/listings/${listingId}/messages${query}`);
     showModal(`<div class="modalhead"><div><h2>Message about ${esc(item.title)}</h2><p>Private conversation between members.</p></div><button class="close" onclick="closeModal()">×</button></div>
       <div id="message-list" style="max-height:300px;overflow:auto;background:#f6f8f4;border-radius:12px;padding:12px">${messages.length?messages.map(message=>`<div style="max-width:85%;margin:8px 0 8px ${message.mine?'auto':'0'};padding:10px 12px;border-radius:12px;background:${message.mine?'#e5f2e9':'white'};font-size:12px;line-height:1.5"><small style="display:block;color:#88948b;margin-bottom:4px">${message.mine?'You':esc(message.sender)}</small>${esc(message.body)}</div>`).join(''):'<p style="text-align:center;color:#89938c;font-size:12px">Start the conversation with a message.</p>'}</div>
-      <form id="messageform" style="display:flex;gap:8px;margin-top:12px"><input name="body" required maxlength="2000" placeholder="Write a message..." style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:11px"><button class="primary">Send</button></form><button class="sort" onclick="openConversation(${listingId},${recipientId})">Refresh messages</button>`);
-    $('#messageform').onsubmit = async event => { event.preventDefault(); const content=new FormData(event.currentTarget).get('body'); try { await post(`/api/listings/${listingId}/messages`,{body:content,recipientId}); openConversation(listingId,recipientId); } catch(error) { notify(error.message); } };
+      <form id="messageform" style="display:flex;gap:8px;margin-top:12px"><input name="body" required maxlength="2000" placeholder="Write a message..." style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:11px"><button class="primary" type="submit">Send</button></form><button class="sort" onclick="openConversation(${listingId},${recipientId})">Refresh messages</button>`);
+    $('#messageform').onsubmit = async event => {
+      event.preventDefault(); const form=event.currentTarget; const content=new FormData(form).get('body'); const sendButton=form.querySelector('button[type="submit"]');
+      sendButton.disabled=true;
+      try { await post(`/api/listings/${listingId}/messages`,{body:content,recipientId}); await openConversation(listingId,recipientId); }
+      catch(error) { notify(error.message); }
+      finally { if(sendButton.isConnected) sendButton.disabled=false; }
+    };
     $('#message-list').scrollTop=$('#message-list').scrollHeight;
   } catch (error) { notify(error.message); }
 }

@@ -11,7 +11,6 @@ const { AsyncLocalStorage } = require('node:async_hooks');
 const scrypt = promisify(crypto.scrypt);
 const ROOT = __dirname;
 const APP_URL = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
-const APP_PATH = new URL(APP_URL).pathname.replace(/\/$/, '');
 const PORT = Number(process.env.PORT || 3000);
 const SESSION_DAYS = 30;
 const bodyLimit = 2 * 1024 * 1024;
@@ -311,11 +310,11 @@ async function api(req, res, url) {
     const user = await requireUser(req);
     const rows = await db.prepare(`SELECT m.listing_id,l.title,l.emoji,l.art,
       CASE WHEN m.sender_id=? THEN m.receiver_id ELSE m.sender_id END AS other_id,
-      CASE WHEN m.sender_id=? THEN b.display_name ELSE a.display_name END AS other_name,
+      MAX(CASE WHEN m.sender_id=? THEN b.display_name ELSE a.display_name END) AS other_name,
       MAX(m.id) AS last_id, MAX(m.created_at) AS last_at
       FROM messages m JOIN listings l ON l.id=m.listing_id
       JOIN users a ON a.id=m.sender_id JOIN users b ON b.id=m.receiver_id
-      WHERE m.sender_id=? OR m.receiver_id=? GROUP BY m.listing_id,other_id,l.title,l.emoji,l.art,a.display_name,b.display_name ORDER BY last_id DESC`).all(user.id,user.id,user.id,user.id);
+      WHERE m.sender_id=? OR m.receiver_id=? GROUP BY m.listing_id,other_id,l.title,l.emoji,l.art ORDER BY last_id DESC`).all(user.id,user.id,user.id,user.id);
     return send(res,200,{conversations:rows.map(r=>({listingId:r.listing_id,title:r.title,emoji:r.emoji,art:r.art,otherId:r.other_id,otherName:r.other_name,lastAt:r.last_at}))});
   }
   const messageMatch = route.match(/^\/api\/listings\/(\d+)\/messages$/);
@@ -451,7 +450,7 @@ async function handler(req,res) {
     if (url.pathname.startsWith('/api/')) return await transactionContext.run({connection:undefined},()=>api(req,res,url));
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res,405,{error:'Method not allowed.'});
     if (url.pathname === '/auth' || url.pathname === '/admin') {
-      res.writeHead(301,{ Location:`${APP_PATH}${url.pathname}/${url.search}`, 'Cache-Control':'no-store' });
+      res.writeHead(301,{ Location:`${url.pathname}/${url.search}`, 'Cache-Control':'no-store' });
       return res.end();
     }
     const publicFiles = new Map([
