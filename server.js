@@ -311,11 +311,12 @@ async function api(req, res, url) {
     const rows = await db.prepare(`SELECT m.listing_id,l.title,l.emoji,l.art,
       CASE WHEN m.sender_id=? THEN m.receiver_id ELSE m.sender_id END AS other_id,
       MAX(CASE WHEN m.sender_id=? THEN b.display_name ELSE a.display_name END) AS other_name,
-      MAX(m.id) AS last_id, MAX(m.created_at) AS last_at
+      MAX(m.id) AS last_id, MAX(m.created_at) AS last_at,
+      SUBSTRING_INDEX(GROUP_CONCAT(m.sender_id ORDER BY m.id DESC), ',', 1) AS last_sender_id
       FROM messages m JOIN listings l ON l.id=m.listing_id
       JOIN users a ON a.id=m.sender_id JOIN users b ON b.id=m.receiver_id
       WHERE m.sender_id=? OR m.receiver_id=? GROUP BY m.listing_id,other_id,l.title,l.emoji,l.art ORDER BY last_id DESC`).all(user.id,user.id,user.id,user.id);
-    return send(res,200,{conversations:rows.map(r=>({listingId:r.listing_id,title:r.title,emoji:r.emoji,art:r.art,otherId:r.other_id,otherName:r.other_name,lastAt:r.last_at}))});
+    return send(res,200,{conversations:rows.map(r=>({listingId:r.listing_id,title:r.title,emoji:r.emoji,art:r.art,otherId:r.other_id,otherName:r.other_name,lastId:Number(r.last_id),lastSenderId:Number(r.last_sender_id),lastAt:r.last_at}))});
   }
   const messageMatch = route.match(/^\/api\/listings\/(\d+)\/messages$/);
   if (messageMatch && method === 'GET') {

@@ -59,3 +59,12 @@ button[hidden]{display:none}
 .modal.chat-modal>.sort{flex:0 0 auto;align-self:flex-start;margin-top:7px}
 @keyframes chat-in{from{transform:translateY(12px);opacity:.75}to{transform:translateY(0);opacity:1}}
 @media(max-width:520px){.overlay.chat-open{padding:12px}.modal.chat-modal{width:calc(100vw - 24px);height:min(620px,calc(100vh - 24px));height:min(620px,calc(100dvh - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);padding:15px}.modal.chat-modal #message-list{min-height:100px}}
+
+/* Floating messages launcher with an unread indicator. */
+.messages-fab{position:fixed;right:22px;bottom:22px;z-index:24;display:grid;place-items:center;width:60px;height:60px;padding:0;border:0;border-radius:50%;background:var(--green);color:#fff;box-shadow:0 8px 26px #172a2040;transition:transform .18s ease,box-shadow .18s ease}
+.messages-fab:hover{transform:translateY(-2px);box-shadow:0 12px 30px #172a2050}
+.messages-fab:focus-visible{outline:3px solid #93c8a6;outline-offset:3px}
+.messages-fab[hidden],.messages-badge[hidden]{display:none!important}
+.messages-fab svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.messages-badge{position:absolute;top:-3px;right:-3px;display:grid;place-items:center;min-width:21px;height:21px;padding:0 5px;border:2px solid white;border-radius:999px;background:#d94848;color:white;font-size:10px;font-weight:800;line-height:1}
+@media(max-width:520px){.messages-fab{right:16px;bottom:16px;width:54px;height:54px}.messages-fab svg{width:25px;height:25px}}

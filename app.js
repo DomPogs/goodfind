@@ -29,12 +29,34 @@ function showModal(html) { $('#modal').classList.remove('chat-modal'); $('#overl
 function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
 function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal'); }
 function setListings(rows) { listings.splice(0,listings.length,...rows); }
+function messageReadKey(listingId,otherId) { return `goodfind-message-read:${currentUser?.id}:${listingId}:${otherId}`; }
+function updateMessagesBadge(conversations) {
+  if (!currentUser) return;
+  let unread=0;
+  for (const thread of conversations) {
+    if (Number(thread.lastSenderId)===Number(currentUser.id)) continue;
+    let readId=0; try { readId=Number(localStorage.getItem(messageReadKey(thread.listingId,thread.otherId))||0); } catch {}
+    if (Number(thread.lastId)>readId) unread++;
+  }
+  const badge=$('#messages-badge'); badge.hidden=unread===0; badge.textContent=unread>9?'9+':String(unread);
+  $('#messages-fab').setAttribute('aria-label',unread?`Messages, ${unread} unread conversations`:'Messages');
+}
+async function refreshMessagesBadge() {
+  if (!currentUser) return;
+  try { const {conversations}=await request('/api/messages'); updateMessagesBadge(conversations); } catch {}
+}
+function markConversationRead(listingId,otherId,messages) {
+  const latest=messages.reduce((max,message)=>Math.max(max,Number(message.id)||0),0);
+  try { localStorage.setItem(messageReadKey(listingId,otherId),String(latest)); } catch {}
+  refreshMessagesBadge();
+}
 function updateNav() {
   const avatar = $('#avatar');
   $('#signinbtn').hidden = Boolean(currentUser);
   $('#signupbtn').hidden = Boolean(currentUser);
   avatar.hidden = !currentUser;
   $('#adminbtn').hidden = currentUser?.role !== 'admin';
+  $('#messages-fab').hidden = !currentUser;
   if (currentUser) { avatar.textContent = currentUser.displayName.slice(0,2).toUpperCase(); avatar.title = currentUser.displayName; }
 }
 
@@ -206,6 +228,7 @@ async function openMessages() {
   if (!currentUser) { openAccount(); notify('Sign in to view messages.'); return; }
   try {
     const {conversations} = await request('/api/messages');
+    updateMessagesBadge(conversations);
     showModal(`<div class="modalhead"><div><h2>Messages</h2><p>Private conversations about member listings.</p></div><button class="close" onclick="closeModal()">×</button></div>
       ${conversations.length?conversations.map(thread=>`<button class="filterbtn" style="width:100%;height:auto;text-align:left;padding:13px;margin:5px 0;display:flex;align-items:center;gap:12px" onclick="openConversation(${thread.listingId},${thread.otherId})"><span style="font-size:23px">${esc(thread.emoji)}</span><span><strong>${esc(thread.title)}</strong><small style="display:block;color:#839087;margin-top:3px">${esc(thread.otherName)}</small></span></button>`).join(''):'<div class="empty" style="padding:35px 10px"><strong>No messages yet</strong>Open a member listing to message its seller.</div>'}`);
   } catch (error) { notify(error.message); }
@@ -223,6 +246,7 @@ async function openConversation(listingId, otherId) {
     const recipientId=isSeller?Number(otherId):Number(item.sellerId);
     const query=isSeller?`?with=${recipientId}`:'';
     const {messages} = await request(`/api/listings/${listingId}/messages${query}`);
+    markConversationRead(listingId,recipientId,messages);
     showChat(`<div class="modalhead"><div><h2>Message about ${esc(item.title)}</h2><p>Private conversation between members.</p></div><button class="close" onclick="closeModal()">×</button></div>
       <div id="message-list" style="max-height:300px;overflow:auto;background:#f6f8f4;border-radius:12px;padding:12px">${messages.length?messages.map(message=>`<div style="max-width:85%;margin:8px 0 8px ${message.mine?'auto':'0'};padding:10px 12px;border-radius:12px;background:${message.mine?'#e5f2e9':'white'};font-size:12px;line-height:1.5"><small style="display:block;color:#88948b;margin-bottom:4px">${message.mine?'You':esc(message.sender)}</small>${esc(message.body)}</div>`).join(''):'<p style="text-align:center;color:#89938c;font-size:12px">Start the conversation with a message.</p>'}</div>
       <form id="messageform" style="display:flex;gap:8px;margin-top:12px"><input name="body" required maxlength="2000" placeholder="Write a message..." style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:11px"><button class="primary" type="submit">Send</button></form><button class="sort" onclick="openConversation(${listingId},${recipientId})">Refresh messages</button>`);
@@ -247,7 +271,7 @@ async function boot() {
   try {
     await request('/api/health'); apiOnline=true;
     const [account,market] = await Promise.all([request('/api/auth/me'),request('/api/listings')]);
-    currentUser=account.user; setListings(market.listings); updateNav(); render();
+    currentUser=account.user; setListings(market.listings); updateNav(); render(); await refreshMessagesBadge();
   } catch { apiOnline=false; updateNav(); }
   if (currentUser) {
     const pending=sessionStorage.getItem('goodfind_pending_conversation');
@@ -270,3 +294,4 @@ async function boot() {
 
 render();
 boot();
+setInterval(()=>{if(currentUser)refreshMessagesBadge();},15000);
