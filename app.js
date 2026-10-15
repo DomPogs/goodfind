@@ -25,8 +25,9 @@ function notify(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('show');
   clearTimeout(window._toast); window._toast = setTimeout(() => toast.classList.remove('show'), 2800);
 }
-function showModal(html) { $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
-function closeModal() { $('#overlay').classList.remove('open'); }
+function showModal(html) { $('#modal').classList.remove('chat-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
+function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
+function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal'); }
 function setListings(rows) { listings.splice(0,listings.length,...rows); }
 function updateNav() {
   const avatar = $('#avatar');
@@ -162,7 +163,7 @@ function openDetail(id) {
   showModal(`<div class="modalhead"><div><div class="eyebrow">${esc(item.kind)} · ${esc(item.category)}</div><h2>${esc(item.title)}</h2><p>Listed by ${esc(item.seller)} · ${esc(item.condition)}</p></div><button class="close" onclick="closeModal()">×</button></div>
     <div class="art detail-art" style="height:220px;border-radius:14px;background:${esc(item.art)};margin-bottom:18px">${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}</div>
     <p style="font-size:13px;line-height:1.7;color:#667269">${esc(item.description)}</p><div class="detailprice">${price(item.price)} <small>${schoolOptions.includes(item.place)?`School: ${esc(item.place)}`:esc(item.place)}</small></div>
-    ${memberItem?(ownListing?'<div class="empty" style="padding:12px;margin-bottom:9px">This is your listing. Buyer messages appear in your inbox.</div><button class="filterbtn" style="width:100%" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" style="width:100%;margin-top:9px" onclick="openConversation('+Number(item.id)+','+Number(item.sellerId)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout becomes available after a member lists this item">Member checkout unavailable on sample listings</button>'}
+    ${memberItem?(ownListing?'<div class="empty" style="padding:12px;margin-bottom:9px">This is your listing. Buyer messages appear in your inbox.</div><button class="filterbtn" style="width:100%" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" style="width:100%;margin-top:9px" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout becomes available after a member lists this item">Member checkout unavailable on sample listings</button>'}
     ${item.trade?`<button class="filterbtn" style="width:100%;margin-top:9px" onclick="openTrade(${Number(item.id)})">↔ Make a trade offer</button>`:''}`);
 }
 async function startCheckout(listingId) {
@@ -210,15 +211,19 @@ async function openMessages() {
   } catch (error) { notify(error.message); }
 }
 async function openConversation(listingId, otherId) {
-  if (!currentUser) { openAccount(); notify('Sign in to message a member.'); return; }
+  if (!currentUser) {
+    try { sessionStorage.setItem('goodfind_pending_conversation',JSON.stringify({listingId:Number(listingId),otherId:otherId==null?null:Number(otherId)})); } catch {}
+    openAccount(); notify('Sign in first. Your conversation will open when you return.'); return;
+  }
   const item = [...extra,...listings].find(row=>Number(row.id)===Number(listingId)); if (!item) return;
   if (!item.sellerId) { notify('Sample listings are view-only.'); return; }
   try {
-    if (currentUser.id===item.sellerId&&!otherId) { notify('Open a buyer thread from your Messages list.'); return; }
-    const recipientId=currentUser.id===item.sellerId?Number(otherId):Number(item.sellerId);
-    const query=currentUser.id===item.sellerId?`?with=${recipientId}`:'';
+    const isSeller=Number(currentUser.id)===Number(item.sellerId);
+    if (isSeller&&!otherId) { notify('Open a buyer thread from your Messages list.'); return; }
+    const recipientId=isSeller?Number(otherId):Number(item.sellerId);
+    const query=isSeller?`?with=${recipientId}`:'';
     const {messages} = await request(`/api/listings/${listingId}/messages${query}`);
-    showModal(`<div class="modalhead"><div><h2>Message about ${esc(item.title)}</h2><p>Private conversation between members.</p></div><button class="close" onclick="closeModal()">×</button></div>
+    showChat(`<div class="modalhead"><div><h2>Message about ${esc(item.title)}</h2><p>Private conversation between members.</p></div><button class="close" onclick="closeModal()">×</button></div>
       <div id="message-list" style="max-height:300px;overflow:auto;background:#f6f8f4;border-radius:12px;padding:12px">${messages.length?messages.map(message=>`<div style="max-width:85%;margin:8px 0 8px ${message.mine?'auto':'0'};padding:10px 12px;border-radius:12px;background:${message.mine?'#e5f2e9':'white'};font-size:12px;line-height:1.5"><small style="display:block;color:#88948b;margin-bottom:4px">${message.mine?'You':esc(message.sender)}</small>${esc(message.body)}</div>`).join(''):'<p style="text-align:center;color:#89938c;font-size:12px">Start the conversation with a message.</p>'}</div>
       <form id="messageform" style="display:flex;gap:8px;margin-top:12px"><input name="body" required maxlength="2000" placeholder="Write a message..." style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:11px"><button class="primary" type="submit">Send</button></form><button class="sort" onclick="openConversation(${listingId},${recipientId})">Refresh messages</button>`);
     $('#messageform').onsubmit = async event => {
@@ -228,7 +233,7 @@ async function openConversation(listingId, otherId) {
       catch(error) { notify(error.message); }
       finally { if(sendButton.isConnected) sendButton.disabled=false; }
     };
-    $('#message-list').scrollTop=$('#message-list').scrollHeight;
+    $('#message-list').scrollTop=$('#message-list').scrollHeight; $('#messageform input').focus();
   } catch (error) { notify(error.message); }
 }
 
@@ -244,6 +249,14 @@ async function boot() {
     const [account,market] = await Promise.all([request('/api/auth/me'),request('/api/listings')]);
     currentUser=account.user; setListings(market.listings); updateNav(); render();
   } catch { apiOnline=false; updateNav(); }
+  if (currentUser) {
+    const pending=sessionStorage.getItem('goodfind_pending_conversation');
+    if (pending) {
+      sessionStorage.removeItem('goodfind_pending_conversation');
+      try { const conversation=JSON.parse(pending); if(Number.isInteger(Number(conversation.listingId))) await openConversation(Number(conversation.listingId),conversation.otherId==null?null:Number(conversation.otherId)); }
+      catch { notify('Could not reopen that conversation. Open the listing and try again.'); }
+    }
+  }
   const params=new URLSearchParams(location.search);
   if (params.get('payment')==='success') notify('Payment submitted. The order updates after Stripe confirms it.');
   if (params.get('payment')==='cancel') {

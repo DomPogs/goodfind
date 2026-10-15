@@ -322,21 +322,23 @@ async function api(req, res, url) {
     const user = await requireUser(req); const listingId = Number(messageMatch[1]);
     const listing = await db.prepare('SELECT * FROM listings WHERE id=?').get(listingId); if (!listing) fail(404, 'Listing not found.');
     const sellerId = listing.seller_id; if (!sellerId) fail(400, 'Messages are available for member listings.');
-    const otherId = user.id === sellerId ? Number(url.searchParams.get('with')) : sellerId;
+    const isSeller = Number(user.id) === Number(sellerId);
+    const otherId = isSeller ? Number(url.searchParams.get('with')) : sellerId;
     if (!otherId || otherId === user.id) fail(400, 'Choose a conversation member.');
-    if (user.id === sellerId && !await db.prepare('SELECT 1 FROM messages WHERE listing_id=? AND ((sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?))').get(listingId,user.id,otherId,otherId,user.id)) fail(403, 'That conversation has not been started.');
+    if (isSeller && !await db.prepare('SELECT 1 FROM messages WHERE listing_id=? AND ((sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?))').get(listingId,user.id,otherId,otherId,user.id)) fail(403, 'That conversation has not been started.');
     const rows = await db.prepare(`SELECT m.id,m.body,m.created_at,m.sender_id,u.display_name AS sender_name
       FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.listing_id=? AND
       ((m.sender_id=? AND m.receiver_id=?) OR (m.sender_id=? AND m.receiver_id=?)) ORDER BY m.id`).all(listingId,user.id,otherId,otherId,user.id);
-    return send(res, 200, { messages:rows.map(m=>({id:m.id,body:m.body,createdAt:m.created_at,senderId:m.sender_id,sender:m.sender_name,mine:m.sender_id===user.id})) });
+    return send(res, 200, { messages:rows.map(m=>({id:m.id,body:m.body,createdAt:m.created_at,senderId:m.sender_id,sender:m.sender_name,mine:Number(m.sender_id)===Number(user.id)})) });
   }
   if (messageMatch && method === 'POST') {
     const user = await requireUser(req); const body = await readBody(req); const listingId = Number(messageMatch[1]);
     const listing = await db.prepare("SELECT * FROM listings WHERE id=? AND status='active'").get(listingId); if (!listing) fail(404, 'Listing not found.');
     if (!listing.seller_id) fail(400, 'Messages are available for member listings.');
-    const receiverId = user.id === listing.seller_id ? Number(body.recipientId) : listing.seller_id;
+    const isSeller = Number(user.id) === Number(listing.seller_id);
+    const receiverId = isSeller ? Number(body.recipientId) : listing.seller_id;
     if (!receiverId || receiverId === user.id) fail(400, 'Choose the other member in this conversation.');
-    if (user.id === listing.seller_id && !await db.prepare('SELECT 1 FROM messages WHERE listing_id=? AND ((sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?))').get(listingId,user.id,receiverId,receiverId,user.id)) fail(403, 'The buyer must start this conversation.');
+    if (isSeller && !await db.prepare('SELECT 1 FROM messages WHERE listing_id=? AND ((sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?))').get(listingId,user.id,receiverId,receiverId,user.id)) fail(403, 'The buyer must start this conversation.');
     const content = text(body.body, 2000, 'Message');
     const result = await db.prepare('INSERT INTO messages(listing_id,sender_id,receiver_id,body,created_at) VALUES(?,?,?,?,?)').run(listing.id,user.id,receiverId,content,nowIso());
     return send(res, 201, { id:Number(result.lastInsertRowid) });
