@@ -39,7 +39,8 @@ function updateMessagesBadge(conversations) {
     if (Number(thread.lastId)>readId) unread++;
   }
   const badge=$('#messages-badge'); badge.hidden=unread===0; badge.textContent=unread>9?'9+':String(unread);
-  $('#messages-fab').setAttribute('aria-label',unread?`Messages, ${unread} unread conversations`:'Messages');
+  const launcher=$('#messages-fab'); launcher.classList.toggle('has-unread',unread>0);
+  launcher.setAttribute('aria-label',unread?`Messages, ${unread} unread conversations`:'Messages');
 }
 async function refreshMessagesBadge() {
   if (!currentUser) return;
@@ -229,8 +230,12 @@ async function openMessages() {
   try {
     const {conversations} = await request('/api/messages');
     updateMessagesBadge(conversations);
-    showModal(`<div class="modalhead"><div><h2>Messages</h2><p>Private conversations about member listings.</p></div><button class="close" onclick="closeModal()">×</button></div>
+    showChat(`<div class="modalhead"><div><h2>Messages</h2><p>Private conversations about member listings.</p></div><button class="close" onclick="closeModal()">×</button></div>
       ${conversations.length?conversations.map(thread=>`<button class="filterbtn" style="width:100%;height:auto;text-align:left;padding:13px;margin:5px 0;display:flex;align-items:center;gap:12px" onclick="openConversation(${thread.listingId},${thread.otherId})"><span style="font-size:23px">${esc(thread.emoji)}</span><span><strong>${esc(thread.title)}</strong><small style="display:block;color:#839087;margin-top:3px">${esc(thread.otherName)}</small></span></button>`).join(''):'<div class="empty" style="padding:35px 10px"><strong>No messages yet</strong>Open a member listing to message its seller.</div>'}`);
+    const inboxList=document.createElement('div');
+    inboxList.className='message-inbox-list';
+    while ($('#modal').children.length > 1) inboxList.append($('#modal').children[1]);
+    $('#modal').append(inboxList);
   } catch (error) { notify(error.message); }
 }
 async function openConversation(listingId, otherId) {

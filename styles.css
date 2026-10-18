@@ -57,6 +57,7 @@ button[hidden]{display:none}
 .modal.chat-modal #messageform input:focus{border-color:#7caa8c;box-shadow:0 0 0 3px #e9f4ec}
 .modal.chat-modal #messageform button.primary{flex:0 0 auto;width:auto;min-width:72px;height:46px;margin:0;padding:0 15px;border-radius:11px;white-space:nowrap}
 .modal.chat-modal>.sort{flex:0 0 auto;align-self:flex-start;margin-top:7px}
+.modal.chat-modal .message-inbox-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:3px}
 @keyframes chat-in{from{transform:translateY(12px);opacity:.75}to{transform:translateY(0);opacity:1}}
 @media(max-width:520px){.overlay.chat-open{padding:12px}.modal.chat-modal{width:calc(100vw - 24px);height:min(620px,calc(100vh - 24px));height:min(620px,calc(100dvh - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);padding:15px}.modal.chat-modal #message-list{min-height:100px}}
 
@@ -68,3 +69,15 @@ button[hidden]{display:none}
 .messages-fab svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .messages-badge{position:absolute;top:-3px;right:-3px;display:grid;place-items:center;min-width:21px;height:21px;padding:0 5px;border:2px solid white;border-radius:999px;background:#d94848;color:white;font-size:10px;font-weight:800;line-height:1}
 @media(max-width:520px){.messages-fab{right:16px;bottom:16px;width:54px;height:54px}.messages-fab svg{width:25px;height:25px}}
+
+/* Refined floating messages button. */
+.messages-fab{width:64px;height:64px;border:1px solid #ffffff80;background:linear-gradient(145deg,#347f62 0%,var(--green) 55%,#174d39 100%);box-shadow:inset 0 1px 0 #ffffff55,0 10px 28px #173b2b45;isolation:isolate}
+.messages-fab::before{content:"Messages";position:absolute;right:calc(100% + 12px);top:50%;padding:9px 13px;border:1px solid #e8eee9;border-radius:999px;background:#fff;color:var(--ink);font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 5px 18px #172a201a;opacity:0;transform:translate(5px,-50%);transition:opacity .18s ease,transform .18s ease;pointer-events:none}
+.messages-fab:hover::before,.messages-fab:focus-visible::before{opacity:1;transform:translate(0,-50%)}
+.messages-fab svg{width:28px;height:28px;filter:drop-shadow(0 1px 1px #102c1c55);transition:transform .18s ease}
+.messages-fab:hover svg{transform:scale(1.08)}
+.messages-fab.has-unread::after{content:"";position:absolute;inset:-5px;z-index:-1;border:2px solid #4e9c76;border-radius:50%;animation:message-pulse 2.2s ease-out infinite}
+.messages-badge{top:-4px;right:-4px;min-width:23px;height:23px;border-width:2px;background:#dc4c52;box-shadow:0 2px 7px #6d1b2544;font-size:10px}
+@keyframes message-pulse{0%{transform:scale(.86);opacity:.7}75%,100%{transform:scale(1.3);opacity:0}}
+@media(max-width:520px){.messages-fab{width:58px;height:58px}.messages-fab svg{width:26px;height:26px}}
+@media(prefers-reduced-motion:reduce){.messages-fab,.messages-fab::before,.messages-fab svg{transition:none}.messages-fab.has-unread::after{animation:none;opacity:.35}}
