@@ -7,6 +7,13 @@ let extra = [];
 const $ = selector => document.querySelector(selector);
 const appBasePath = new URL('.', location.href).pathname.replace(/\/$/,'');
 const schoolOptions = ['UM Panabo College','Aces Polytechnic College','Southern Davao National High School'];
+const schoolMapPoints = {
+  'UM Panabo College':{lat:7.30477,lng:125.67898},
+  'Aces Polytechnic College':{lat:7.33192,lng:125.66064},
+  'Southern Davao National High School':{lat:7.33216,lng:125.65722}
+};
+let listingsMap=null, mapMarkers=null, leafletPromise=null, lastShownListings=[];
+let locationWatchId=null, userLocationMarker=null, userAccuracyCircle=null, firstLocationFix=true;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const price = value => '\u20B1' + Number(value).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -73,6 +80,7 @@ function render() {
     (!tradeOnly || item.trade) && (!location || item.place === location) && (!query || [item.title,item.seller,item.category,item.description,item.place].join(' ').toLowerCase().includes(query)));
   if (sort === 'low') shown.sort((a,b) => a.price-b.price);
   if (sort === 'high') shown.sort((a,b) => b.price-a.price);
+  lastShownListings=shown;
   $('#heading').textContent = active === 'all' ? 'Picked for you' : active === 'trade' ? 'Open to trade' : active === 'new' ? 'Recently added' : active === 'physical' ? 'Physical goods' : 'Digital goods';
   $('#resultcount').textContent = `${shown.length} ${shown.length === 1 ? 'find' : 'finds'} ready for a new home`;
   $('#grid').innerHTML = shown.length ? shown.map(item => `<article class="card">
@@ -81,9 +89,90 @@ function render() {
     <div class="cardbody"><div class="sellerline"><span class="mini">${esc(item.initial)}</span>${esc(item.seller)} ${item.verified ? '<span class="verified">✓</span>' : ''} · ${esc(item.condition)}</div>
     <h3 title="${esc(item.title)}">${esc(item.title)}</h3><p class="sub">${esc(item.description.slice(0,65))}${item.description.length>65?'…':''}</p>
     <div class="cardfoot"><span class="price">${price(item.price)}</span>${item.trade?'<span class="tradeTag">↔ Open to trade</span>':''}</div>
-    <div class="location">${schoolOptions.includes(item.place)?'School':'⌖'} · ${esc(item.place)}</div><div style="display:flex;gap:8px;margin-top:12px">
-    <button class="primary" style="flex:1;padding:9px 8px;font-size:11px" onclick="openDetail(${Number(item.id)})">View item</button>
-    ${item.trade?`<button class="filterbtn" style="height:34px;padding:0 9px;color:var(--green);font-size:11px" onclick="openTrade(${Number(item.id)})">Offer trade</button>`:''}</div></div></article>`).join('') : '<div class="empty"><strong>No finds yet</strong>Try a different search or category.</div>';
+    <div class="location">${schoolOptions.includes(item.place)?'School':'⌖'} · ${esc(item.place)}</div><div class="card-actions">
+    <button class="primary card-action" onclick="openDetail(${Number(item.id)})">View item</button>
+    ${item.trade?`<button class="filterbtn card-trade-action" onclick="openTrade(${Number(item.id)})">Offer trade</button>`:''}</div></div></article>`).join('') : '<div class="empty"><strong>No finds yet</strong>Try a different search or category.</div>';
+  if (listingsMap && !$('#mapview').hidden) refreshMapMarkers();
+}
+function loadLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (leafletPromise) return leafletPromise;
+  leafletPromise = new Promise((resolve,reject) => {
+    const script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+    script.crossOrigin=''; script.onload=resolve; script.onerror=()=>reject(new Error('Map library could not load. Check your internet connection.'));
+    document.head.append(script);
+  });
+  return leafletPromise;
+}
+async function toggleMapView() {
+  const mapView=$('#mapview'), button=$('#maptoggle');
+  const opening=mapView.hidden;
+  mapView.hidden=!opening; $('#grid').hidden=opening;
+  button.textContent=opening?'Show list':'Show map'; button.setAttribute('aria-pressed',String(opening));
+  if (!opening) { if(locationWatchId!==null) stopLiveLocation(); return; }
+  try {
+    await loadLeaflet();
+    if (!listingsMap) {
+      listingsMap=L.map('listings-map').setView([7.308,125.683],11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(listingsMap);
+      mapMarkers=L.layerGroup().addTo(listingsMap);
+    }
+    refreshMapMarkers();
+    showPanaboCity();
+    setTimeout(()=>listingsMap.invalidateSize(),100);
+  } catch(error) { notify(error.message); }
+}
+function refreshMapMarkers() {
+  if (!listingsMap||!mapMarkers) return;
+  mapMarkers.clearLayers();
+  const bounds=[];
+  for (const [school,point] of Object.entries(schoolMapPoints)) {
+    const matches=lastShownListings.filter(item=>item.place===school);
+    if (!matches.length) continue;
+    const marker=L.marker([point.lat,point.lng]).addTo(mapMarkers);
+    const items=matches.slice(0,5).map(item=>`<li><strong>${esc(item.title)}</strong> ? ${price(item.price)}</li>`).join('');
+    marker.bindPopup(`<div class="map-popup"><strong>${esc(school)}</strong><span>${matches.length} ${matches.length===1?'listing':'listings'}</span><ul>${items}</ul>${matches.length>5?`<small>and ${matches.length-5} more</small>`:''}</div>`);
+    bounds.push([point.lat,point.lng]);
+  }
+  showPanaboCity();
+}
+function showPanaboCity() {
+  if (!listingsMap) return;
+  listingsMap.fitBounds([[7.19,125.54],[7.45,125.82]],{padding:[18,18]});
+  $('#location-status').textContent=locationWatchId===null?'Showing the full Panabo City area.':'Live location is updating.';
+}
+function toggleLiveLocation() {
+  if (locationWatchId!==null) { stopLiveLocation(); return; }
+  if (!navigator.geolocation) { notify('Location is not available in this browser.'); return; }
+  firstLocationFix=true;
+  $('#locate-button').textContent='Finding location?';
+  $('#location-status').textContent='Waiting for browser location permission?';
+  locationWatchId=navigator.geolocation.watchPosition(position=>{
+    const {latitude,longitude,accuracy}=position.coords;
+    const point=[latitude,longitude];
+    if (!userLocationMarker) userLocationMarker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#2878e5',fillOpacity:1}).addTo(listingsMap);
+    else userLocationMarker.setLatLng(point);
+    if (!userAccuracyCircle) userAccuracyCircle=L.circle(point,{radius:Math.min(accuracy||0,1500),color:'#2878e5',weight:1,fillColor:'#2878e5',fillOpacity:.12}).addTo(listingsMap);
+    else userAccuracyCircle.setLatLng(point).setRadius(Math.min(accuracy||0,1500));
+    if (firstLocationFix) { listingsMap.setView(point,15); firstLocationFix=false; }
+    $('#locate-button').textContent='Stop live location';
+    $('#location-status').textContent=`Live location updating ? accuracy about ${Math.round(accuracy)} m.`;
+  },error=>{
+    stopLiveLocation();
+    const messages={1:'Location permission was denied. Allow it in your browser settings to use live location.',2:'Your location could not be determined. Check device location services and try again.',3:'Location request timed out. Try again.'};
+    $('#location-status').textContent='Live location is off.';
+    notify(messages[error.code]||'Could not get your location.');
+  },{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+}
+function stopLiveLocation() {
+  if (locationWatchId!==null) navigator.geolocation.clearWatch(locationWatchId);
+  locationWatchId=null;
+  if (listingsMap && userLocationMarker) listingsMap.removeLayer(userLocationMarker);
+  if (listingsMap && userAccuracyCircle) listingsMap.removeLayer(userAccuracyCircle);
+  userLocationMarker=null; userAccuracyCircle=null;
+  $('#locate-button').textContent='Use my location';
+  $('#location-status').textContent='Live location paused. It is not saved to your Goodfind account.';
 }
 function saveItem(button) { const saved = button.classList.toggle('saved'); button.textContent = saved ? '♥' : '♡'; notify(saved ? 'Saved to your favorites.' : 'Removed from your favorites.'); }
 
@@ -97,7 +186,7 @@ function accountPanel() {
   showModal(`<div class="modalhead"><div><h2>${esc(currentUser.displayName)}</h2><p>${esc(currentUser.email)}</p></div><button class="close" onclick="closeModal()">×</button></div>
     <div class="tradeoffer"><div class="yougive">SELLER PAYOUTS</div><p style="font-size:13px;line-height:1.6;color:#657168">${currentUser.payoutsConnected?'Your Stripe payouts account is connected.':'Connect a Stripe account to receive sale payouts.'}</p>
     ${currentUser.payoutsConnected?'':`<div class="field"><label>Two-letter payout country code</label><input id="country" maxlength="2" pattern="[A-Za-z]{2}" placeholder="e.g. US"></div><button class="filterbtn" style="width:100%" onclick="startPayoutSetup()">Set up payouts with Stripe</button>`}</div>
-    <button class="filterbtn" style="width:100%;margin-top:12px" onclick="signOut()">Sign out</button>`);
+    <div class="account-signout"><div class="account-signout-copy"><span class="signout-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></svg></span><span><strong>Sign out</strong><small>End your Goodfind session on this device.</small></span></div><button class="signout-btn" onclick="signOut()" aria-label="Sign out of Goodfind">Sign out<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 5h8v14h-8M4 12h12m-4-4 4 4-4 4"/></svg></button></div>`);
 }
 async function startPayoutSetup() {
   try { const data = await post('/api/payments/connect/onboard',{country:$('#country').value}); location.href = data.url; }
@@ -177,7 +266,14 @@ function compressPhoto(file) {
   })();
 }
 function readPhotoData(file) { return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Could not read that photo.'));reader.readAsDataURL(file);}); }
-function selectTab(kind) { document.querySelectorAll('.tab').forEach(button => button.classList.toggle('active',button.dataset.kind===kind)); active=kind; }
+function selectTab(kind) {
+  active=kind;
+  document.querySelectorAll('.tab').forEach(button=>button.classList.toggle('active',button.dataset.kind===kind));
+  document.querySelectorAll('.navlinks a').forEach(link=>{
+    const linkKind=link.dataset.kind||'all';
+    link.classList.toggle('active',linkKind===kind||(linkKind==='all'&&!['physical','digital'].includes(kind)));
+  });
+}
 
 function openDetail(id) {
   const item = [...extra,...listings].find(row=>Number(row.id)===Number(id)); if (!item) return;
@@ -269,6 +365,7 @@ async function openConversation(listingId, otherId) {
 function toggleFilters() { const panel=$('#filterpanel'); panel.style.display=panel.style.display==='flex'?'none':'flex'; }
 $('#tabs').addEventListener('click',event=>{const button=event.target.closest('.tab');if(!button)return;selectTab(button.dataset.kind);render();});
 document.querySelectorAll('.navlinks [data-kind]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();document.querySelector(`#tabs [data-kind="${link.dataset.kind}"]`).click();$('#discover').scrollIntoView({behavior:'smooth'});}));
+document.querySelector('.navlinks a[href="#discover"]:not([data-kind])').addEventListener('click',event=>{event.preventDefault();selectTab('all');render();$('#discover').scrollIntoView({behavior:'smooth'});});
 $('#search').addEventListener('input',render); $('#tradeonly').addEventListener('change',render); $('#locationfilter').addEventListener('change',render); $('#sortby').addEventListener('change',render);
 document.addEventListener('keydown',event=>{if(event.key==='/'&&document.activeElement.tagName!=='INPUT'){event.preventDefault();$('#search').focus();}if(event.key==='Escape')closeModal();});
 
