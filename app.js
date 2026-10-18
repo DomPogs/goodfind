@@ -91,6 +91,7 @@ function render() {
       <span class="badge"><span>${item.kind === 'physical' ? 'Physical' : 'Digital'}</span><span class="badge-divider" aria-hidden="true">&#183;</span><span class="badge-category">${esc(item.category)}</span></span>
       <button class="heart" aria-label="Save ${esc(item.title)}" onclick="saveItem(this)">&#9825;</button>
       ${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}
+      ${item.photoCount>1?`<span class="photo-count-badge">${item.photoCount} photos</span>`:''}
     </div>
     <div class="cardbody">
       <div class="sellerline"><span class="mini" aria-hidden="true">${esc(item.initial)}</span><span class="sellername">${esc(item.seller)}</span>${item.verified ? '<span class="verified" title="Verified member" aria-label="Verified member">&#10003;</span>' : ''}</div>
@@ -262,19 +263,33 @@ function openSell() {
   <div class="field"><label>Type</label><div class="choice" role="radiogroup" aria-label="Listing type"><label class="selected"><input type="radio" name="kind" value="physical" checked> Physical good</label><label><input type="radio" name="kind" value="digital"> Digital good</label></div></div>
   <div class="field"><label>Category</label><select name="category"><option>Home & living</option><option>Art & prints</option><option>Tech</option><option>Gaming</option><option>Photography</option><option>Accessories</option><option>Digital art</option><option>Templates</option><option>Music</option><option>Other</option></select></div>
   <div class="field"><label>Price (PHP)</label><input name="price" type="number" min="1" max="1000000" step="0.01" required placeholder="0.00"></div>
-  <div class="field"><label for="itemPhoto">Item photo <span class="optional-label">Optional</span></label><div class="photo-field-layout"><div id="photoPreview" class="photo-preview" aria-live="polite" hidden><div class="photo-preview-head"><span id="photoPreviewName">Selected photo</span><button type="button" id="removePhoto" class="photo-remove">Remove</button></div><div class="photo-preview-image"><img id="photoPreviewImage" alt="Preview of the selected item photo"></div></div><div class="photo-controls"><div class="photo-upload"><input id="itemPhoto" name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="photo-input"><small class="field-help">JPG, PNG, or WebP · up to 8 MB</small></div></div></div></div>
-  <div class="field"><label>Condition or delivery</label><input name="condition" maxlength="40" placeholder="Good, new, instant download..."></div>
+  <div class="field"><label for="itemPhoto">Item photos <span class="optional-label">Optional · up to 10</span></label><div class="photo-upload photo-upload-multiple"><div class="photo-upload-intro"><span class="photo-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span><strong>Add item photos</strong><small>Choose up to 10 pictures. Your first photo will be the cover.</small></span></div><input id="itemPhoto" name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple class="photo-input"><small class="field-help">JPG, PNG, or WebP · up to 8 MB each</small></div><div class="photo-selection-summary"><strong id="photoCount">0 of 10 photos selected</strong><span>Photos are compressed before publishing.</span></div><div id="photoPreviewGrid" class="photo-preview-grid" aria-live="polite"></div></div>  <div class="field"><label>Condition or delivery</label><input name="condition" maxlength="40" placeholder="Good, new, instant download..."></div>
   <div class="field" id="schoolfield"><label>Which school community is this item for?</label><select name="place" required><option value="" disabled selected>Choose a school</option><option>UM Panabo College</option><option>Aces Polytechnic College</option><option>Southern Davao National High School</option></select></div>
   <div class="field"><label>Details</label><textarea name="description" required maxlength="2000" placeholder="Condition, what's included, delivery details..."></textarea></div>
-  <div class="field"><label><input type="checkbox" name="trade" style="accent-color:var(--green)"> Open to trade offers</label></div><button class="primary">Publish listing</button></form>`);
+    <div class="field"><label><input type="checkbox" name="trade" style="accent-color:var(--green)"> Open to trade offers</label></div><button type="submit" class="primary">Publish listing</button></form>`);
   const schoolField = $('#schoolfield');
-  $('#itemPhoto').addEventListener('change', () => {
-    const file = $('#itemPhoto').files[0]; const preview = $('#photoPreview');
-    if (!file) { preview.hidden=true; return; }
-    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8*1024*1024) { $('#itemPhoto').value=''; preview.hidden=true; notify('Choose a JPG, PNG, or WebP photo under 8 MB.'); return; }
-    const previewImage=$('#photoPreviewImage');const previewUrl=URL.createObjectURL(file);previewImage.onload=()=>URL.revokeObjectURL(previewUrl);previewImage.onerror=()=>notify('The selected file could not be previewed. Try another JPG, PNG, or WebP image.');$('#photoPreviewName').textContent=file.name;previewImage.src=previewUrl;preview.hidden=false;
+  const selectedPhotos=[];
+  const photoGrid=$('#photoPreviewGrid');
+  const renderPhotoPreviews=()=>{
+    $('#photoCount').textContent=`${selectedPhotos.length} of 10 ${selectedPhotos.length===1?'photo':'photos'} selected`;
+    photoGrid.innerHTML=selectedPhotos.map((photo,index)=>`<div class="photo-thumb ${index===0?'photo-thumb-cover':''}"><img src="${esc(photo.previewUrl)}" alt="Preview ${index+1}: ${esc(photo.file.name)}"><span class="photo-thumb-label">${index===0?'Cover photo':`Photo ${index+1}`}</span><button type="button" class="photo-thumb-remove" data-remove-photo="${index}" aria-label="Remove ${esc(photo.file.name)}">&#215;</button>${index>0?`<button type="button" class="photo-make-cover" data-cover-photo="${index}">Make cover</button>`:''}</div>`).join('');
+  };
+  $('#itemPhoto').addEventListener('change',event=>{
+    const input=event.currentTarget;const files=[...input.files];input.value='';
+    const remaining=10-selectedPhotos.length;
+    if(files.length>remaining)notify(remaining?`You can add up to 10 photos. Adding the first ${remaining} available.`:'You already selected 10 photos. Remove one to add another.');
+    for(const file of files.slice(0,remaining)){
+      if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>8*1024*1024){notify(`${file.name}: choose a JPG, PNG, or WebP photo under 8 MB.`);continue;}
+      selectedPhotos.push({file,previewUrl:URL.createObjectURL(file)});
+    }
+    renderPhotoPreviews();
   });
-  $('#removePhoto').addEventListener('click',()=>{$('#itemPhoto').value='';$('#photoPreviewImage').removeAttribute('src');$('#photoPreview').hidden=true;});
+  photoGrid.addEventListener('click',event=>{
+    const remove=event.target.closest('[data-remove-photo]');
+    if(remove){const index=Number(remove.dataset.removePhoto);const [photo]=selectedPhotos.splice(index,1);if(photo)URL.revokeObjectURL(photo.previewUrl);renderPhotoPreviews();return;}
+    const cover=event.target.closest('[data-cover-photo]');
+    if(cover){const [photo]=selectedPhotos.splice(Number(cover.dataset.coverPhoto),1);if(photo)selectedPhotos.unshift(photo);renderPhotoPreviews();}
+  });
   document.querySelectorAll('#sellform input[name="kind"]').forEach(radio => radio.addEventListener('change', () => {
     document.querySelectorAll('#sellform .choice label').forEach(label => label.classList.toggle('selected',label.querySelector('input').checked));
     const physical = $('#sellform input[name="kind"]:checked').value === 'physical';
@@ -285,10 +300,14 @@ function openSell() {
     event.preventDefault(); const form = new FormData(event.currentTarget); const kind = form.get('kind');
     const draft = {title:form.get('title'),kind,category:form.get('category'),price:Number(form.get('price')),
       condition:form.get('condition') || (kind==='digital'?'Instant download':'Good'),place:form.get('place'),description:form.get('description'),trade:form.has('trade')};
+    const submitButton=event.currentTarget.querySelector('button[type="submit"]');
     try {
-      const photo=$('#itemPhoto').files[0]; if (photo) draft.photoData=await compressPhoto(photo);
+      submitButton.disabled=true;
+      $('#itemPhoto').disabled=true;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=true);
+      if(selectedPhotos.length){draft.photosData=[];for(let index=0;index<selectedPhotos.length;index++){submitButton.textContent=`Processing photo ${index+1} of ${selectedPhotos.length}…`;draft.photosData.push(await compressPhoto(selectedPhotos[index].file));}}
+      submitButton.textContent='Publishing listing…';
       const result = await post('/api/listings',draft); listings.unshift(result.listing); closeModal(); active='all'; selectTab('all'); render(); notify('Your listing is live.');
-    } catch (error) { notify(error.message); }
+    } catch (error) { notify(error.message);submitButton.disabled=false;submitButton.textContent='Publish listing';$('#itemPhoto').disabled=false;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=false); }
   };
 }
 function compressPhoto(file) {
@@ -299,8 +318,12 @@ function compressPhoto(file) {
       const source=await readPhotoData(file);
       image=await new Promise((resolve,reject)=>{const element=new Image();element.onload=()=>resolve(element);element.onerror=()=>reject(new Error('This image could not be decoded. Try saving it as a JPG, PNG, or WebP photo.'));element.src=source;});
     }
-    const scale=Math.min(1,1200/Math.max(image.width,image.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);if(image.close)image.close();
-    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.82));if(!blob)throw new Error('Could not process that photo.');return readPhotoData(blob);
+    let scale=Math.min(1,1200/Math.max(image.width,image.height));let blob=null;
+    for(let attempt=0;attempt<5;attempt++){
+      const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
+      blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',[0.82,0.76,0.70,0.64,0.58][attempt]));if(blob&&blob.size<=900*1024)break;scale*=0.82;
+    }
+    if(image.close)image.close();if(!blob||blob.size>1024*1024)throw new Error('Could not reduce that image below 1 MB. Choose a smaller photo.');return readPhotoData(blob);
   })();
 }
 function readPhotoData(file) { return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Could not read that photo.'));reader.readAsDataURL(file);}); }
@@ -313,16 +336,20 @@ function selectTab(kind) {
   });
 }
 
-function openDetail(id) {
-  const item = [...extra,...listings].find(row=>Number(row.id)===Number(id)); if (!item) return;
+async function openDetail(id) {
+  let item = [...extra,...listings].find(row=>Number(row.id)===Number(id)); if (!item) return;
   const memberItem = Boolean(item.sellerId);
+  if(memberItem&&!Array.isArray(item.photosData)){
+    try{const result=await request(`/api/listings/${Number(item.id)}`);item={...item,...result.listing};}catch{}
+  }
+  const photos=Array.isArray(item.photosData)&&item.photosData.length?item.photosData:(item.photoData?[item.photoData]:[]);
   const ownListing = memberItem && currentUser && Number(currentUser.id)===Number(item.sellerId);
   showModal(`<div class="detail-modal-head">
       <div class="detail-heading-copy"><div class="detail-type"><span>${esc(item.kind)}</span><span class="detail-type-dot" aria-hidden="true">&#183;</span><span>${esc(item.category)}</span></div><h2>${esc(item.title)}</h2></div>
       <button class="close" onclick="closeModal()" aria-label="Close item details">&#215;</button>
     </div>
     <div class="detail-layout">
-      <div class="detail-visual" style="background:${esc(item.art)}">${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}</div>
+      <div class="detail-gallery"><div class="detail-visual" style="background:${esc(item.art)}">${photos.length?`<img id="detailMainPhoto" class="item-photo" src="${esc(photos[0])}" alt="Photo 1 of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}</div>${photos.length>1?`<div class="detail-photo-strip" aria-label="Item photos">${photos.map((photo,index)=>`<button type="button" class="detail-photo-thumb ${index===0?'active':''}" data-photo-index="${index}" aria-label="View photo ${index+1} of ${esc(item.title)}"><img src="${esc(photo)}" alt=""><span>${index+1}</span></button>`).join('')}</div>`:''}</div>
       <div class="detail-pane">
         <div class="detail-seller"><span class="detail-seller-avatar">${esc(item.initial)}</span><span class="detail-seller-copy"><strong>${esc(item.seller)} ${item.verified?'<span class="detail-verified" aria-label="Verified member">&#10003;</span>':''}</strong><small>${memberItem?'Goodfind member':'Community listing'}</small></span></div>
         <div class="detail-priceblock"><div><span class="detail-label">Asking price</span><strong class="detailprice">${price(item.price)}</strong></div>${item.trade?'<span class="detail-trade-pill">Trade considered</span>':''}</div>
@@ -333,6 +360,11 @@ function openDetail(id) {
     ${ownListing?'<div class="detail-owner-note"><strong>Your listing</strong><span>Buyer messages about this item are in your inbox.</span></div>':''}
     <div class="detail-actions">${memberItem?(ownListing?'<button class="primary" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout is available for member listings">Member checkout unavailable</button>'}${item.trade?`<button class="filterbtn detail-trade-button" onclick="openTrade(${Number(item.id)})">&#8596; Make a trade offer</button>`:''}</div>`);
   $('#modal').classList.add('detail-modal');
+  document.querySelectorAll('.detail-photo-thumb').forEach(button=>button.addEventListener('click',()=>{
+    const index=Number(button.dataset.photoIndex);const image=$('#detailMainPhoto');if(!image||!photos[index])return;
+    image.src=photos[index];image.alt=`Photo ${index+1} of ${item.title}`;
+    document.querySelectorAll('.detail-photo-thumb').forEach(thumb=>thumb.classList.toggle('active',thumb===button));
+  }));
 }
 async function startCheckout(listingId) {
   if (!currentUser) { closeModal(); openAccount(); notify('Sign in before checkout.'); return; }

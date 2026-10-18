@@ -64,6 +64,14 @@ CREATE TABLE IF NOT EXISTS listings (
   CONSTRAINT fk_listings_category FOREIGN KEY (category_id) REFERENCES categories(category_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS listing_photos (
+  listing_id BIGINT UNSIGNED NOT NULL,
+  photo_order TINYINT UNSIGNED NOT NULL,
+  photo_data MEDIUMTEXT NOT NULL,
+  PRIMARY KEY (listing_id,photo_order),
+  CONSTRAINT fk_listing_photos_listing FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS orders (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   listing_id BIGINT UNSIGNED NOT NULL,

@@ -13,7 +13,7 @@ const ROOT = __dirname;
 const APP_URL = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 const PORT = Number(process.env.PORT || 3000);
 const SESSION_DAYS = 30;
-const bodyLimit = 2 * 1024 * 1024;
+const bodyLimit = 16 * 1024 * 1024;
 const loginAttempts = new Map();
 const mime = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
 const pool = mysql.createPool({host:process.env.DB_HOST||'127.0.0.1',port:Number(process.env.DB_PORT||3306),database:process.env.DB_NAME||'youfind',user:process.env.DB_USER||'root',password:process.env.DB_PASSWORD||'',waitForConnections:true,connectionLimit:10,charset:'utf8mb4',decimalNumbers:true});
@@ -71,6 +71,13 @@ async function initializeDatabase() {
   if (!Number(photoColumn.n)) await db.prepare('ALTER TABLE listings ADD COLUMN photo_data MEDIUMTEXT NULL').run();
   const profilePhotoColumn = await db.prepare("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='profile_photo'").get();
   if (!Number(profilePhotoColumn.n)) await db.prepare('ALTER TABLE users ADD COLUMN profile_photo MEDIUMTEXT NULL').run();
+  await pool.query(`CREATE TABLE IF NOT EXISTS listing_photos (
+    listing_id BIGINT UNSIGNED NOT NULL,
+    photo_order TINYINT UNSIGNED NOT NULL,
+    photo_data MEDIUMTEXT NOT NULL,
+    PRIMARY KEY (listing_id,photo_order),
+    CONSTRAINT fk_listing_photos_listing FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 function send(res, status, payload, headers = {}) {
@@ -80,11 +87,12 @@ function send(res, status, payload, headers = {}) {
 function fail(status, message) { throw new HttpError(status, message); }
 function nowIso() { return new Date().toISOString(); }
 function safeUser(row) { return row ? { id:row.id, schoolId:row.school_id, displayName:row.full_name || row.display_name, contactNo:row.contact_no, profilePhoto:row.profile_photo || null, email:row.email, role:row.role || 'buyer', payoutsConnected:Boolean(row.stripe_charges_enabled&&row.stripe_payouts_enabled), createdAt:row.created_at } : null; }
-function publicListing(row) {
+function publicListing(row, includePhotos = false, photos = null) {
+  const gallery=photos || (row.photo_data ? [row.photo_data] : []);
   return { id:row.id, sellerId:row.seller_id, title:row.title, seller:row.seller_name,
     initial:row.initial, verified:Boolean(row.verified), price:row.price_cents / 100,
     kind:row.kind, category:row.category_name || row.category, categoryId:row.category_id, condition:row.condition, place:row.place,
-    emoji:row.emoji, art:row.art, photoData:row.photo_data || null, note:row.note, trade:Boolean(row.open_to_trade),
+    emoji:row.emoji, art:row.art, photoData:row.photo_data || null, photoCount:Number(row.photo_count ?? gallery.length), ...(includePhotos ? {photosData:gallery} : {}), note:row.note, trade:Boolean(row.open_to_trade),
     description:row.description, status:row.status, createdAt:row.created_at };
 }
 function parseCookies(req) {
@@ -204,8 +212,14 @@ async function api(req, res, url) {
     return send(res, 200, { id,status:body.status });
   }
   if (method === 'GET' && route === '/api/listings') {
-    const rows = await db.prepare("SELECT l.*,c.category_name FROM listings l LEFT JOIN categories c USING(category_id) WHERE l.status='active' ORDER BY l.created_at DESC").all();
+    const rows = await db.prepare("SELECT l.*,c.category_name,(IF(l.photo_data IS NULL,0,1)+(SELECT COUNT(*) FROM listing_photos p WHERE p.listing_id=l.id)) AS photo_count FROM listings l LEFT JOIN categories c USING(category_id) WHERE l.status='active' ORDER BY l.created_at DESC").all();
     return send(res, 200, { listings:rows.map(publicListing) });
+  }
+  if (method === 'GET' && /^\/api\/listings\/\d+$/.test(route)) {
+    const row = await db.prepare("SELECT l.*,c.category_name,(IF(l.photo_data IS NULL,0,1)+(SELECT COUNT(*) FROM listing_photos p WHERE p.listing_id=l.id)) AS photo_count FROM listings l LEFT JOIN categories c USING(category_id) WHERE l.id=? AND l.status='active'").get(Number(route.split('/').pop()));
+    if (!row) fail(404, 'This listing is no longer available.');
+    const extras=await db.prepare('SELECT photo_data FROM listing_photos WHERE listing_id=? ORDER BY photo_order').all(row.id);
+    return send(res, 200, { listing:publicListing(row,true,[...(row.photo_data?[row.photo_data]:[]),...extras.map(photo=>photo.photo_data)]) });
   }
   if (method === 'GET' && route === '/api/auth/me') return send(res, 200, { user:safeUser(await currentUser(req)) });
   if (method === 'PATCH' && route === '/api/auth/profile') {
@@ -260,24 +274,35 @@ async function api(req, res, url) {
     const user = await requireUser(req); const body = await readBody(req);
     const title = text(body.title, 100, 'Title'); const description = text(body.description, 2000, 'Description', 5);
     const price = Number(body.price); if (!Number.isFinite(price) || price < 1 || price > 1000000) fail(400, 'Price must be between PHP 1 and PHP 1,000,000.');
-    let photoData = null;
-    if (body.photoData !== undefined && body.photoData !== null && body.photoData !== '') {
-      if (typeof body.photoData !== 'string' || body.photoData.length > 1500000) fail(400, 'Photo must be a JPG image no larger than 1 MB after processing.');
-      const match = body.photoData.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/);
-      if (!match) fail(400, 'Upload a JPG, PNG, or WebP image.');
+    const validatePhoto = value => {
+      if (typeof value !== 'string' || value.length > 1500000) fail(400, 'Each photo must be a JPG image no larger than 1 MB after processing.');
+      const match = value.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!match) fail(400, 'Upload JPG, PNG, or WebP images.');
       const bytes = Buffer.from(match[1], 'base64');
-      if (bytes.length > 1024*1024 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[bytes.length-2] !== 0xff || bytes[bytes.length-1] !== 0xd9) fail(400, 'The photo is invalid or too large.');
-      photoData = body.photoData;
-    }
+      if (bytes.length > 1024*1024 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[bytes.length-2] !== 0xff || bytes[bytes.length-1] !== 0xd9) fail(400, 'A photo is invalid or too large.');
+      return value;
+    };
+    let photosData=[];
+    if (body.photosData !== undefined) {
+      if (!Array.isArray(body.photosData) || body.photosData.length > 10) fail(400, 'Choose up to 10 item photos.');
+      photosData=body.photosData.map(validatePhoto);
+    } else if (body.photoData) photosData=[validatePhoto(body.photoData)];
+    const photoData=photosData[0] || null;
     const kind = body.kind === 'digital' ? 'digital' : body.kind === 'physical' ? 'physical' : fail(400, 'Choose physical or digital goods.');
     const category = text(body.category, 60, 'Category');
     const categoryId = await ensureCategory(category);
     const condition = kind === 'digital' ? text(body.condition || 'Instant download', 40, 'Delivery type') : text(body.condition || 'Good', 40, 'Condition');
     const place = kind === 'digital' ? 'Digital delivery' : text(body.place || 'Local pickup or shipping', 80, 'Location');
     const palette = kind === 'digital' ? 'linear-gradient(140deg,#d6d0f1,#a9a0dc)' : 'linear-gradient(140deg,#d4e4ce,#a8c6a4)';
-    const result = await db.prepare(`INSERT INTO listings(seller_id,title,seller_name,initial,price_cents,kind,category_id,category,\`condition\`,place,emoji,art,photo_data,note,open_to_trade,description,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(user.id,title,user.display_name,user.display_name.slice(0,1).toUpperCase(),Math.round(price*100),kind,categoryId,category,condition,place,kind==='digital'?'💾':'✨',palette,photoData,'JUST LISTED',body.trade?1:0,description,nowIso());
-    return send(res, 201, { listing:publicListing(await db.prepare('SELECT * FROM listings WHERE id=?').get(Number(result.lastInsertRowid))) });
+    const result = await db.transaction(async()=>{
+      const inserted=await db.prepare(`INSERT INTO listings(seller_id,title,seller_name,initial,price_cents,kind,category_id,category,\`condition\`,place,emoji,art,photo_data,note,open_to_trade,description,created_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(user.id,title,user.display_name,user.display_name.slice(0,1).toUpperCase(),Math.round(price*100),kind,categoryId,category,condition,place,kind==='digital'?'💾':'✨',palette,photoData,'JUST LISTED',body.trade?1:0,description,nowIso());
+      const listingId=Number(inserted.lastInsertRowid);
+      for(let index=1;index<photosData.length;index++)await db.prepare('INSERT INTO listing_photos(listing_id,photo_order,photo_data) VALUES(?,?,?)').run(listingId,index+1,photosData[index]);
+      return inserted;
+    });
+    const listingId=Number(result.lastInsertRowid);
+    return send(res, 201, { listing:publicListing(await db.prepare('SELECT * FROM listings WHERE id=?').get(listingId),true,photosData) });
   }
 
   if (method === 'POST' && route === '/api/trades') {
