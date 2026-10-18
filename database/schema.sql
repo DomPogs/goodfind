@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   display_name VARCHAR(120) NOT NULL,
   full_name VARCHAR(120) NOT NULL,
   contact_no VARCHAR(25) NOT NULL DEFAULT '',
+  profile_photo MEDIUMTEXT NULL,
   email VARCHAR(254) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',

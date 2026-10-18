@@ -69,6 +69,8 @@ async function initializeDatabase() {
   for (const name of categoryChoices) await ensureCategory(name);
   const photoColumn = await db.prepare("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='listings' AND COLUMN_NAME='photo_data'").get();
   if (!Number(photoColumn.n)) await db.prepare('ALTER TABLE listings ADD COLUMN photo_data MEDIUMTEXT NULL').run();
+  const profilePhotoColumn = await db.prepare("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='profile_photo'").get();
+  if (!Number(profilePhotoColumn.n)) await db.prepare('ALTER TABLE users ADD COLUMN profile_photo MEDIUMTEXT NULL').run();
 }
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 function send(res, status, payload, headers = {}) {
@@ -77,7 +79,7 @@ function send(res, status, payload, headers = {}) {
 }
 function fail(status, message) { throw new HttpError(status, message); }
 function nowIso() { return new Date().toISOString(); }
-function safeUser(row) { return row ? { id:row.id, schoolId:row.school_id, displayName:row.full_name || row.display_name, contactNo:row.contact_no, email:row.email, role:row.role || 'buyer', payoutsConnected:Boolean(row.stripe_charges_enabled&&row.stripe_payouts_enabled), createdAt:row.created_at } : null; }
+function safeUser(row) { return row ? { id:row.id, schoolId:row.school_id, displayName:row.full_name || row.display_name, contactNo:row.contact_no, profilePhoto:row.profile_photo || null, email:row.email, role:row.role || 'buyer', payoutsConnected:Boolean(row.stripe_charges_enabled&&row.stripe_payouts_enabled), createdAt:row.created_at } : null; }
 function publicListing(row) {
   return { id:row.id, sellerId:row.seller_id, title:row.title, seller:row.seller_name,
     initial:row.initial, verified:Boolean(row.verified), price:row.price_cents / 100,
@@ -206,6 +208,25 @@ async function api(req, res, url) {
     return send(res, 200, { listings:rows.map(publicListing) });
   }
   if (method === 'GET' && route === '/api/auth/me') return send(res, 200, { user:safeUser(await currentUser(req)) });
+  if (method === 'PATCH' && route === '/api/auth/profile') {
+    const user = await requireUser(req); const body = await readBody(req);
+    const displayName = text(body.displayName, 60, 'Full name');
+    const schoolId = text(body.schoolId, 40, 'School ID').toUpperCase();
+    const contactNo = text(body.contactNo, 25, 'Contact number', 7);
+    if (await db.prepare("SELECT 1 FROM users WHERE school_id=? AND id<>? AND school_id<>''").get(schoolId,user.id)) fail(409, 'That school ID is already in use.');
+    let profilePhoto = null;
+    if (body.profilePhoto !== undefined && body.profilePhoto !== null && body.profilePhoto !== '') {
+      if (typeof body.profilePhoto !== 'string' || body.profilePhoto.length > 1500000) fail(400, 'Profile photo must be a JPG image no larger than 1 MB after processing.');
+      const match = body.profilePhoto.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!match) fail(400, 'Upload a JPG, PNG, or WebP image.');
+      const bytes = Buffer.from(match[1], 'base64');
+      if (bytes.length > 1024*1024 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[bytes.length-2] !== 0xff || bytes[bytes.length-1] !== 0xd9) fail(400, 'The profile photo is invalid or too large.');
+      profilePhoto = body.profilePhoto;
+    }
+    await db.prepare('UPDATE users SET school_id=?,display_name=?,full_name=?,contact_no=?,profile_photo=? WHERE id=?').run(schoolId,displayName,displayName,contactNo,profilePhoto,user.id);
+    await db.prepare('UPDATE listings SET seller_name=?,initial=? WHERE seller_id=?').run(displayName,displayName.slice(0,2).toUpperCase(),user.id);
+    return send(res, 200, { user:safeUser(await db.prepare('SELECT * FROM users WHERE id=?').get(user.id)) });
+  }
   if (method === 'POST' && route === '/api/auth/register') {
     const body = await readBody(req); const email = text(body.email, 254, 'Email').toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, 'Enter a valid email address.');

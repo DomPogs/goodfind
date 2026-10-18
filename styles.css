@@ -195,3 +195,27 @@ body{background:radial-gradient(ellipse at 12% 0%,#eef5ed 0,transparent 31rem),v
 .trust{margin-bottom:22px}
 @media(max-width:760px){.shell{padding-left:13px;padding-right:13px}.hero{margin-top:12px;padding:23px 18px 20px}.searchrow{margin:10px 0}.tabs{margin-right:-13px;padding-bottom:9px}.grid{gap:9px;padding-bottom:21px}}
 @media(max-width:410px){.shell{padding-left:9px;padding-right:9px}.hero{padding:21px 15px 18px}.tabs{margin-right:-9px}.grid{gap:8px}}
+
+/* Member profile editing */
+.avatar{overflow:hidden;padding:0;border:0;flex:0 0 auto}
+.avatar img,.profile-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.profile-summary{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid #e8eee8;border-radius:15px;background:linear-gradient(135deg,#f9fbf8,#f1f6f1)}
+.profile-avatar{width:48px;height:48px;flex:0 0 auto;display:grid;place-items:center;overflow:hidden;border-radius:50%;background:#e5d7c9;color:#754d38;font-weight:800;font-size:14px}
+.profile-summary-copy{min-width:0;flex:1}
+.profile-summary-copy strong,.profile-summary-copy span,.profile-summary-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-summary-copy strong{font-size:13px;color:#26382d}
+.profile-summary-copy span{margin-top:3px;color:#647168;font-size:11px}
+.profile-summary-copy small{margin-top:4px;color:#849087;font-size:10px}
+.profile-edit-btn{height:36px;flex:0 0 auto;padding:0 12px;font-size:11px}
+.profile-photo-editor{display:flex;align-items:center;gap:15px;margin:2px 0 18px;padding:14px;border:1px solid #e8eee8;border-radius:14px;background:#f8faf7}
+.profile-avatar-large{width:76px;height:76px;font-size:19px}
+.profile-photo-actions{display:flex;align-items:flex-start;flex-direction:column;gap:7px}
+.profile-upload{display:inline-flex;align-items:center;justify-content:center;min-height:35px;padding:0 13px;border-radius:9px;background:#eaf1eb;color:#315b3d;font-size:11px;font-weight:700;cursor:pointer}
+.profile-upload:hover{background:#dfeae0}
+.profile-remove,.profile-cancel{border:0;background:transparent;color:#718077;font-size:11px;font-weight:700;cursor:pointer}
+.profile-remove{padding:0;color:#a05650}
+.profile-photo-actions small,.profile-help{color:#89948b;font-size:10px}
+#profileform .field{margin:12px 0}
+#profileform .primary{margin-top:4px}
+#profileform .profile-cancel{display:block;margin:12px auto 0;padding:7px 12px}
+@media(max-width:430px){.profile-summary{align-items:flex-start;flex-wrap:wrap}.profile-summary-copy{width:calc(100% - 65px);flex:1}.profile-edit-btn{margin-left:61px}.profile-summary-copy small{white-space:normal}}

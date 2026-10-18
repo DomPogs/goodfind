@@ -65,7 +65,10 @@ function updateNav() {
   avatar.hidden = !currentUser;
   $('#adminbtn').hidden = currentUser?.role !== 'admin';
   $('#messages-fab').hidden = !currentUser;
-  if (currentUser) { avatar.textContent = currentUser.displayName.slice(0,2).toUpperCase(); avatar.title = currentUser.displayName; }
+  if (currentUser) {
+    avatar.title = currentUser.displayName;
+    avatar.innerHTML = currentUser.profilePhoto ? `<img src="${esc(currentUser.profilePhoto)}" alt="">` : esc(currentUser.displayName.slice(0,2).toUpperCase());
+  }
 }
 
 function render() {
@@ -183,10 +186,36 @@ function openAccount() {
 }
 function openSignup() { authPage('signup'); }
 function accountPanel() {
-  showModal(`<div class="modalhead"><div><h2>${esc(currentUser.displayName)}</h2><p>${esc(currentUser.email)}</p></div><button class="close" onclick="closeModal()">×</button></div>
+  showModal(`<div class="modalhead"><div><div class="eyebrow">YOUR ACCOUNT</div><h2>Account settings</h2><p>Manage your profile and seller payouts.</p></div><button class="close" onclick="closeModal()">×</button></div>
+    <div class="profile-summary"><div class="profile-avatar">${currentUser.profilePhoto?`<img src="${esc(currentUser.profilePhoto)}" alt="Profile photo">`:esc(currentUser.displayName.slice(0,2).toUpperCase())}</div><div class="profile-summary-copy"><strong>${esc(currentUser.displayName)}</strong><span>${esc(currentUser.email)}</span><small>${esc(currentUser.contactNo||'Add your contact number')} · ${esc(currentUser.schoolId||'Add your school ID')}</small></div><button class="filterbtn profile-edit-btn" onclick="editProfile()">Edit profile</button></div>
     <div class="tradeoffer"><div class="yougive">SELLER PAYOUTS</div><p style="font-size:13px;line-height:1.6;color:#657168">${currentUser.payoutsConnected?'Your Stripe payouts account is connected.':'Connect a Stripe account to receive sale payouts.'}</p>
     ${currentUser.payoutsConnected?'':`<div class="field"><label>Two-letter payout country code</label><input id="country" maxlength="2" pattern="[A-Za-z]{2}" placeholder="e.g. US"></div><button class="filterbtn" style="width:100%" onclick="startPayoutSetup()">Set up payouts with Stripe</button>`}</div>
     <div class="account-signout"><div class="account-signout-copy"><span class="signout-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></svg></span><span><strong>Sign out</strong><small>End your Goodfind session on this device.</small></span></div><button class="signout-btn" onclick="signOut()" aria-label="Sign out of Goodfind">Sign out<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 5h8v14h-8M4 12h12m-4-4 4 4-4 4"/></svg></button></div>`);
+}
+let profilePhotoDraft = null;
+function editProfile() {
+  profilePhotoDraft = currentUser.profilePhoto || null;
+  showModal(`<div class="modalhead"><div><div class="eyebrow">YOUR ACCOUNT</div><h2>Edit profile</h2><p>Update the information other members see.</p></div><button class="close" onclick="accountPanel()">×</button></div>
+    <form id="profileform">
+      <div class="profile-photo-editor"><div class="profile-avatar profile-avatar-large" id="profile-preview">${profilePhotoDraft?`<img src="${esc(profilePhotoDraft)}" alt="Profile photo preview">`:esc(currentUser.displayName.slice(0,2).toUpperCase())}</div><div class="profile-photo-actions"><label class="profile-upload" for="profilePhotoFile">Choose photo</label><input id="profilePhotoFile" type="file" accept="image/jpeg,image/png,image/webp" hidden><button type="button" class="profile-remove" id="removeProfilePhoto" ${profilePhotoDraft?'':'hidden'}>Remove photo</button><small>JPG, PNG, or WebP · up to 8 MB</small></div></div>
+      <div class="field"><label for="profileName">Full name</label><input id="profileName" name="displayName" value="${esc(currentUser.displayName)}" maxlength="60" required autocomplete="name"></div>
+      <div class="field"><label for="profileSchoolId">School ID</label><input id="profileSchoolId" name="schoolId" value="${esc(currentUser.schoolId)}" maxlength="40" required></div>
+      <div class="field"><label for="profileContact">Contact number</label><input id="profileContact" name="contactNo" value="${esc(currentUser.contactNo)}" maxlength="25" minlength="7" required autocomplete="tel"></div>
+      <div class="field"><label>Email address</label><input value="${esc(currentUser.email)}" disabled><small class="profile-help">Email changes need a separate verification step.</small></div>
+      <button class="primary" id="saveProfile" type="submit">Save changes</button><button class="profile-cancel" type="button" onclick="accountPanel()">Cancel</button>
+    </form>`);
+  $('#profilePhotoFile').addEventListener('change',async event=>{
+    const file=event.currentTarget.files[0]; if(!file)return;
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>8*1024*1024){event.currentTarget.value='';notify('Choose a JPG, PNG, or WebP photo under 8 MB.');return;}
+    try { profilePhotoDraft=await compressPhoto(file); $('#profile-preview').innerHTML=`<img src="${esc(profilePhotoDraft)}" alt="Profile photo preview">`; $('#removeProfilePhoto').hidden=false; }
+    catch(error){notify(error.message);}
+  });
+  $('#removeProfilePhoto').addEventListener('click',()=>{profilePhotoDraft=null;$('#profilePhotoFile').value='';$('#profile-preview').textContent=currentUser.displayName.slice(0,2).toUpperCase();$('#removeProfilePhoto').hidden=true;});
+  $('#profileform').onsubmit=async event=>{
+    event.preventDefault();const form=new FormData(event.currentTarget);const button=$('#saveProfile');button.disabled=true;button.textContent='Saving…';
+    try { const result=await patch('/api/auth/profile',{displayName:form.get('displayName'),schoolId:form.get('schoolId'),contactNo:form.get('contactNo'),profilePhoto:profilePhotoDraft});currentUser=result.user;updateNav();accountPanel();notify('Profile updated successfully.'); }
+    catch(error){notify(error.message);button.disabled=false;button.textContent='Save changes';}
+  };
 }
 async function startPayoutSetup() {
   try { const data = await post('/api/payments/connect/onboard',{country:$('#country').value}); location.href = data.url; }
