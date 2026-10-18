@@ -503,7 +503,7 @@ async function handler(req,res) {
       return res.end();
     }
     const publicFiles = new Map([
-      ['/','index.html'],['/index.html','index.html'],['/styles.css','styles.css'],['/data.js','data.js'],['/app.js','app.js'],
+      ['/','index.html'],['/index.html','index.html'],['/landing.css','landing.css'],['/marketplace.html','marketplace.html'],['/styles.css','styles.css'],['/data.js','data.js'],['/app.js','app.js'],
       ['/auth/','auth/index.html'],['/auth/index.html','auth/index.html'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js'],
       ['/admin/','admin/live.html'],['/admin/index.html','admin/live.html'],['/admin/admin.css','admin/live.css'],['/admin/admin.js','admin/live.js']
     ]);

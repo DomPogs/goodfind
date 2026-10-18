@@ -45,7 +45,7 @@ authForm.addEventListener('submit',async event=>{
     const response=await fetch(`${appBasePath}/api/auth/${signup?'register':'login'}`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const result=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(result.error||`Request failed (${response.status}).`);
-    location.href=`${appBasePath}/`;
+    location.href=`${appBasePath}/marketplace.html`;
   }catch(error){notice.textContent=error.message||'Could not connect to Goodfind. Try again.';notice.classList.add('error');}
   finally{submit.disabled=false;}
 });

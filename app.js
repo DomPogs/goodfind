@@ -473,6 +473,7 @@ async function boot() {
   if (params.get('payout_setup')==='return'&&currentUser) {
     try { await request('/api/payments/connect/status'); const account=await request('/api/auth/me');currentUser=account.user;updateNav();notify(currentUser.payoutsConnected?'Payout setup is complete.':'Stripe may need more information before payouts are enabled.'); } catch(error) { notify(error.message); }
   }
+  if (params.get('sell')==='1') openSell();
 }
 
 render();

@@ -3,25 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f7f7f3">
-<title>YouFind — Marketplace & Trades</title>
- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
- <link rel="stylesheet" href="styles.css?v=multi-photo-2">
+<meta name="theme-color" content="#f8f8f3">
+<meta name="description" content="Find useful things, meet your local community, and give good finds a new home with YouFind.">
+<title>YouFind — Find good things nearby</title>
+<link rel="stylesheet" href="landing.css?v=landing-2">
 </head>
 <body>
-<header class="topbar"><div class="shell nav"><a class="logo" href="#"><span class="logo-mark">↗</span>YouFind</a><nav class="navlinks"><a class="active" href="#discover">Discover</a><a href="#discover" data-kind="physical">Physical</a><a href="#discover" data-kind="digital">Digital</a><a href="#trust">How it works</a></nav><div class="navright"><button class="iconbtn" aria-label="My trade offers" title="My trade offers" onclick="openOffers()">⇄</button><button class="iconbtn" aria-label="Notifications" onclick="notify('You’re all caught up.')">♧<i class="dot"></i></button><button class="authnav" id="signinbtn" onclick="openAccount()">Sign in</button><button class="authnav authnav-primary" id="signupbtn" onclick="openSignup()">Sign up</button><button class="avatar" id="avatar" title="Account" onclick="openAccount()" hidden></button><button class="adminnav" id="adminbtn" onclick="openAdmin()" hidden>Admin</button><button class="sellbtn" onclick="openSell()">＋ List an item</button></div></div></header>
-<main class="shell" id="discover">
- <section class="hero"><div><div class="eyebrow">A better way to pass things on</div><h1>Find your next <span>good thing.</span></h1><p>Buy it, trade it, pass it on. Discover things people love, both physical and digital.</p></div></section>
- <div class="searchrow"><label class="searchbox"><span class="mag">⌕</span><input id="search" type="search" placeholder="Search items, brands, or categories..." aria-label="Search listings"><span class="shortcut">/</span></label><button class="filterbtn" id="filterbtn" onclick="toggleFilters()"><span>☷</span>Filters</button></div>
- <div id="filterpanel" style="display:none;background:white;border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin:-12px 0 20px;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:12px;color:var(--muted);font-weight:600">Show:</span><label style="font-size:12px"><input type="checkbox" id="tradeonly" style="accent-color:var(--green)"> Trade offers only</label><label style="font-size:12px;color:var(--muted);font-weight:600">School</label><select id="locationfilter" aria-label="Filter by school" style="border:1px solid var(--line);border-radius:8px;padding:8px;color:#59665c;font-size:12px"><option value="">All schools</option><option>UM Panabo College</option><option>Aces Polytechnic College</option><option>Southern Davao National High School</option></select></div>
- <div class="tabs" id="tabs"><button class="tab active" data-kind="all">For you</button><button class="tab" data-kind="physical">Physical goods</button><button class="tab" data-kind="digital">Digital goods</button><button class="tab" data-kind="trade">Open to trade</button><button class="tab" data-kind="new">Recently added</button></div>
- <section><div class="section-head"><div><h2 id="heading">Picked for you</h2><p id="resultcount">12 thoughtful finds, ready for a new home</p></div><div class="listing-tools"><button id="maptoggle" class="map-toggle" type="button" onclick="toggleMapView()" aria-pressed="false">Show map</button><label class="sortcontrol">Sort by <select id="sortby" aria-label="Sort listings"><option value="recent">Recently listed</option><option value="low">Price: cheapest first</option><option value="high">Price: most expensive first</option></select></label></div></div><div id="mapview" class="map-view" hidden><div class="map-toolbar"><div class="map-title"><strong>Panabo City</strong><small id="location-status">Showing the city area and nearby school pickup points.</small></div><div class="map-actions"><button type="button" class="map-control" onclick="showPanaboCity()">Whole city</button><button type="button" id="locate-button" class="map-control map-control-primary" onclick="toggleLiveLocation()">Use my location</button></div></div><div id="listings-map" class="listings-map" role="application" aria-label="Map of Panabo City and approximate listing pickup locations"></div><p class="map-note">Listing pins show approximate school pickup areas. Live location is shown only while enabled and is not saved to your Goodfind account.</p></div><div class="grid" id="grid"></div></section>
- <aside class="trust" id="trust"><div class="trusticon">♧</div><div><strong>Good trades start with trust.</strong><p>Every listing comes from a real community member. Trade details stay between you and the other person.</p></div><div class="trustitems"><span><b>✓</b> Member ratings</span><span><b>✓</b> Clear trade terms</span><span><b>✓</b> Secure checkout soon</span></div></aside>
+<header class="landing-shell landing-header">
+  <a class="landing-brand" href="./" aria-label="YouFind home"><span class="brand-mark" aria-hidden="true">↗</span>YouFind</a>
+  <nav class="landing-nav" aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#local-finds">Made for local finds</a></nav>
+  <div class="landing-actions"><a class="landing-signin" href="auth/?mode=login">Sign in</a><a class="landing-button" href="marketplace.html#discover">Explore items <span aria-hidden="true">→</span></a></div>
+</header>
+<main>
+  <section class="landing-shell landing-hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <div class="eyebrow">Good finds, closer to home</div>
+      <h1 id="hero-title">Find it. Love it. <span>Pass it on.</span></h1>
+      <p>A thoughtful local marketplace to discover useful things, share what you no longer need, and make a good trade.</p>
+      <div class="hero-buttons"><a class="landing-button" href="marketplace.html#discover">Browse the marketplace <span aria-hidden="true">→</span></a><a class="landing-button outline" href="marketplace.html?sell=1">List something good</a></div>
+      <div class="hero-proof"><span class="proof-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Buy, sell, and trade in one community</span></div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="art-orbit"></div><div class="art-sun"></div><span class="art-spark spark-one">✳</span><span class="art-spark spark-two">✦</span><div class="art-leaf"></div>
+      <div class="art-card art-chip"><span class="chip-icon">⌕</span><span>Find something<br>worth keeping</span></div>
+      <div class="art-card art-card-main"><div class="art-product"><div class="art-stem"></div><div class="art-vase"></div></div><div class="art-card-note">Give good things a new home<small>Discover something lovely nearby</small></div></div>
+      <div class="art-card art-float"><b>↗</b><span>Pass it on,<br>keep it moving</span></div>
+    </div>
+  </section>
+  <div class="landing-shell landing-strip" aria-label="Marketplace features"><span><i></i>Find local listings</span><span><i></i>Message members</span><span><i></i>Buy, sell or trade</span></div>
+  <section class="landing-shell landing-section" id="how-it-works">
+    <div class="section-kicker">A simple way to find your next favorite</div><h2 class="section-title">Good things move better together.</h2><p class="section-intro">One account gives you room to explore, share your own listings, and connect directly with your community.</p>
+    <div class="steps-grid">
+      <article class="step-card"><div class="step-icon" aria-hidden="true">⌕</div><h3>Find something useful</h3><p>Browse physical and digital listings, search by what you need, and discover what is available nearby.</p></article>
+      <article class="step-card"><div class="step-icon" aria-hidden="true">＋</div><h3>Share what you have</h3><p>Create a listing with photos and details. Set a price, invite trade offers, or make room for both.</p></article>
+      <article class="step-card"><div class="step-icon" aria-hidden="true">↗</div><h3>Make a good connection</h3><p>Message another member to ask questions, work out the details, and find a good next home for an item.</p></article>
+    </div>
+  </section>
+  <section class="landing-shell landing-feature" id="local-finds">
+    <div class="feature-visual" aria-hidden="true"><div class="feature-pins"><span class="pin pin-a">⌂</span><span class="pin pin-b">✦</span><span class="pin pin-c">↗</span></div></div>
+    <div class="feature-copy"><div class="eyebrow">Rooted in your community</div><h2>Closer finds.<br>Better connections.</h2><p>YouFind brings members together around the things they want to find, sell, or trade. Start with a listing, then connect directly to agree on what works for you.</p><div class="feature-points"><span>Explore different kinds of listings</span><span>Keep your chats in one place</span><span>One account for buying and selling</span></div></div>
+  </section>
+  <section class="landing-shell landing-cta"><div><h2>Ready to find something good?</h2><p>Explore the marketplace or share something with the community.</p></div><a class="landing-button light" href="marketplace.html#discover">Explore YouFind <span aria-hidden="true">→</span></a></section>
 </main>
-<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><section class="modal" id="modal"></section></div><button id="messages-fab" class="messages-fab" onclick="openMessages()" aria-label="Messages" title="Messages" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4.5 5.5h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5.5 3v-3h-1.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/></svg><span class="messages-badge" id="messages-badge" hidden></span></button><div class="toast" id="toast"></div>
-<script src="data.js"></script>
-<script src="app.js?v=multi-photo-2"></script>
+<footer class="landing-shell landing-footer"><a class="footer-brand" href="./">↗ YouFind</a><span>Find good things. Pass good things on.</span><nav class="footer-links" aria-label="Footer"><a href="marketplace.html#discover">Marketplace</a><a href="auth/?mode=signup">Create account</a><a href="admin/">Admin</a></nav></footer>
 </body>
 </html>
-
-
