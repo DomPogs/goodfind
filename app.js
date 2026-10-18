@@ -32,8 +32,8 @@ function notify(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('show');
   clearTimeout(window._toast); window._toast = setTimeout(() => toast.classList.remove('show'), 2800);
 }
-function showModal(html) { $('#modal').classList.remove('chat-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
-function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
+function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
+function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
 function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal'); }
 function setListings(rows) { listings.splice(0,listings.length,...rows); }
 function messageReadKey(listingId,otherId) { return `goodfind-message-read:${currentUser?.id}:${listingId}:${otherId}`; }
@@ -87,14 +87,23 @@ function render() {
   $('#heading').textContent = active === 'all' ? 'Picked for you' : active === 'trade' ? 'Open to trade' : active === 'new' ? 'Recently added' : active === 'physical' ? 'Physical goods' : 'Digital goods';
   $('#resultcount').textContent = `${shown.length} ${shown.length === 1 ? 'find' : 'finds'} ready for a new home`;
   $('#grid').innerHTML = shown.length ? shown.map(item => `<article class="card">
-    <div class="art" style="background:${esc(item.art)}"><span class="badge">${item.kind === 'physical' ? 'PHYSICAL' : 'DIGITAL'} · ${esc(item.category.toUpperCase())}</span>
-    <button class="heart" aria-label="Save ${esc(item.title)}" onclick="saveItem(this)">♡</button>${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}</div>
-    <div class="cardbody"><div class="sellerline"><span class="mini">${esc(item.initial)}</span>${esc(item.seller)} ${item.verified ? '<span class="verified">✓</span>' : ''} · ${esc(item.condition)}</div>
-    <h3 title="${esc(item.title)}">${esc(item.title)}</h3><p class="sub">${esc(item.description.slice(0,65))}${item.description.length>65?'…':''}</p>
-    <div class="cardfoot"><span class="price">${price(item.price)}</span>${item.trade?'<span class="tradeTag">↔ Open to trade</span>':''}</div>
-    <div class="location">${schoolOptions.includes(item.place)?'School':'⌖'} · ${esc(item.place)}</div><div class="card-actions">
-    <button class="primary card-action" onclick="openDetail(${Number(item.id)})">View item</button>
-    ${item.trade?`<button class="filterbtn card-trade-action" onclick="openTrade(${Number(item.id)})">Offer trade</button>`:''}</div></div></article>`).join('') : '<div class="empty"><strong>No finds yet</strong>Try a different search or category.</div>';
+    <div class="art" style="background:${esc(item.art)}">
+      <span class="badge"><span>${item.kind === 'physical' ? 'Physical' : 'Digital'}</span><span class="badge-divider" aria-hidden="true">&#183;</span><span class="badge-category">${esc(item.category)}</span></span>
+      <button class="heart" aria-label="Save ${esc(item.title)}" onclick="saveItem(this)">&#9825;</button>
+      ${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}
+    </div>
+    <div class="cardbody">
+      <div class="sellerline"><span class="mini" aria-hidden="true">${esc(item.initial)}</span><span class="sellername">${esc(item.seller)}</span>${item.verified ? '<span class="verified" title="Verified member" aria-label="Verified member">&#10003;</span>' : ''}</div>
+      <h3 title="${esc(item.title)}">${esc(item.title)}</h3>
+      <p class="sub">${esc(item.description.slice(0,90))}${item.description.length>90?'&#8230;':''}</p>
+      <div class="card-detail-row">
+        <div class="location" title="${esc(item.place)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg><span>${esc(item.place)}</span></div>
+        <span class="condition-tag" title="${esc(item.condition)}">${esc(item.condition)}</span>
+      </div>
+      <div class="cardfoot"><span class="price">${price(item.price)}</span>${item.trade?'<span class="tradeTag"><span aria-hidden="true">&#8596;</span> Open to trade</span>':''}</div>
+      <div class="card-actions"><button class="primary card-action" onclick="openDetail(${Number(item.id)})">View item</button>${item.trade?`<button class="filterbtn card-trade-action" onclick="openTrade(${Number(item.id)})">Offer trade</button>`:''}</div>
+    </div>
+  </article>`).join('') : '<div class="empty"><strong>No finds yet</strong>Try a different search or category.</div>';
   if (listingsMap && !$('#mapview').hidden) refreshMapMarkers();
 }
 function loadLeaflet() {
@@ -308,11 +317,22 @@ function openDetail(id) {
   const item = [...extra,...listings].find(row=>Number(row.id)===Number(id)); if (!item) return;
   const memberItem = Boolean(item.sellerId);
   const ownListing = memberItem && currentUser && Number(currentUser.id)===Number(item.sellerId);
-  showModal(`<div class="modalhead"><div><div class="eyebrow">${esc(item.kind)} · ${esc(item.category)}</div><h2>${esc(item.title)}</h2><p>Listed by ${esc(item.seller)} · ${esc(item.condition)}</p></div><button class="close" onclick="closeModal()">×</button></div>
-    <div class="art detail-art" style="height:220px;border-radius:14px;background:${esc(item.art)};margin-bottom:18px">${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}</div>
-    <p style="font-size:13px;line-height:1.7;color:#667269">${esc(item.description)}</p><div class="detailprice">${price(item.price)} <small>${schoolOptions.includes(item.place)?`School: ${esc(item.place)}`:esc(item.place)}</small></div>
-    ${memberItem?(ownListing?'<div class="empty" style="padding:12px;margin-bottom:9px">This is your listing. Buyer messages appear in your inbox.</div><button class="filterbtn" style="width:100%" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" style="width:100%;margin-top:9px" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout becomes available after a member lists this item">Member checkout unavailable on sample listings</button>'}
-    ${item.trade?`<button class="filterbtn" style="width:100%;margin-top:9px" onclick="openTrade(${Number(item.id)})">↔ Make a trade offer</button>`:''}`);
+  showModal(`<div class="detail-modal-head">
+      <div class="detail-heading-copy"><div class="detail-type"><span>${esc(item.kind)}</span><span class="detail-type-dot" aria-hidden="true">&#183;</span><span>${esc(item.category)}</span></div><h2>${esc(item.title)}</h2></div>
+      <button class="close" onclick="closeModal()" aria-label="Close item details">&#215;</button>
+    </div>
+    <div class="detail-layout">
+      <div class="detail-visual" style="background:${esc(item.art)}">${item.photoData?`<img class="item-photo" src="${esc(item.photoData)}" alt="Photo of ${esc(item.title)}">`:`<span class="emoji">${esc(item.emoji)}</span><span class="artnote">${esc(item.note)}</span>`}</div>
+      <div class="detail-pane">
+        <div class="detail-seller"><span class="detail-seller-avatar">${esc(item.initial)}</span><span class="detail-seller-copy"><strong>${esc(item.seller)} ${item.verified?'<span class="detail-verified" aria-label="Verified member">&#10003;</span>':''}</strong><small>${memberItem?'Goodfind member':'Community listing'}</small></span></div>
+        <div class="detail-priceblock"><div><span class="detail-label">Asking price</span><strong class="detailprice">${price(item.price)}</strong></div>${item.trade?'<span class="detail-trade-pill">Trade considered</span>':''}</div>
+        <div class="detail-facts"><div class="detail-fact"><span>Condition</span><strong>${esc(item.condition)}</strong></div><div class="detail-fact"><span>Category</span><strong>${esc(item.category)}</strong></div><div class="detail-fact detail-fact-place"><span>${item.kind==='digital'?'Delivery':'Pickup location'}</span><strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>${esc(item.place)}</strong></div></div>
+        <section class="detail-description"><h3>About this item</h3><p>${esc(item.description)}</p></section>
+      </div>
+    </div>
+    ${ownListing?'<div class="detail-owner-note"><strong>Your listing</strong><span>Buyer messages about this item are in your inbox.</span></div>':''}
+    <div class="detail-actions">${memberItem?(ownListing?'<button class="primary" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout is available for member listings">Member checkout unavailable</button>'}${item.trade?`<button class="filterbtn detail-trade-button" onclick="openTrade(${Number(item.id)})">&#8596; Make a trade offer</button>`:''}</div>`);
+  $('#modal').classList.add('detail-modal');
 }
 async function startCheckout(listingId) {
   if (!currentUser) { closeModal(); openAccount(); notify('Sign in before checkout.'); return; }

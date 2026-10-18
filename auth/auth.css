@@ -15,3 +15,18 @@ body{background:radial-gradient(ellipse at 14% 17%,#e6f1e4 0,transparent 38rem),
 .authformside{padding:48px clamp(25px,5vw,60px)}.authswitch{border:1px solid #e6ece5;background:#f5f7f3;border-radius:12px;padding:4px;margin-bottom:25px}.authswitch button{padding:11px}.authswitch button.active{color:#215f42;box-shadow:0 2px 8px #1d3d2b13}.authformside h2{font-size:28px;letter-spacing:-.9px}.authintro{font-size:12px}.authformside .field{margin:14px 0}.authformside .primary{min-height:46px;border-radius:11px}
 .authlegal{color:#88958b}.authnotice{border:1px solid #d9e9dc;border-radius:11px;background:#eef6ee}.authnotice.error{border-color:#f0d8d4;background:#fff1ef;color:#9f463e}
 @media(max-width:720px){.authmain{padding:22px 13px}.authlayout{border-radius:20px}.authstory{padding:27px 25px}.authstory h1{font-size:34px}.authformside{padding:28px 24px 32px}.authbarinner{padding:0 16px}}
+
+/* Match the refreshed marketplace and improve sign-in feedback. */
+body{background:radial-gradient(ellipse at 12% 16%,#e6f0e3 0,transparent 36rem),#f5f7f3}
+.authbar{background:#ffffffed;border-color:#e6ece5;box-shadow:0 4px 20px #1c39280a;backdrop-filter:blur(14px)}
+.authlayout{border-color:#e0e9df;border-radius:26px;box-shadow:0 28px 80px #1b392716;animation:auth-arrive .48s cubic-bezier(.2,.75,.25,1) both}
+.authstory{background:linear-gradient(145deg,#173c2b,#1f6445 68%,#347a55)}
+.authstory:after{animation:auth-orbit 14s ease-in-out infinite alternate}
+.authformside{padding-top:52px;padding-bottom:52px}
+.authswitch button{transition:background .18s,color .18s,box-shadow .18s,transform .18s}.authswitch button:hover{transform:translateY(-1px)}
+.authformside .field input{transition:border-color .16s,background .16s,box-shadow .16s}.authformside .field input:focus{background:#fff;border-color:#7eaa89;box-shadow:0 0 0 4px #236b5012}
+.authformside .primary{box-shadow:0 7px 16px #236b5024;transition:transform .16s,box-shadow .16s,background .16s}.authformside .primary:hover{transform:translateY(-2px);box-shadow:0 11px 22px #236b5030}
+.backlink{transition:color .16s,transform .16s}.backlink:hover{transform:translateX(-2px)}
+@keyframes auth-arrive{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes auth-orbit{from{transform:translate(-8px,4px) rotate(-5deg)}to{transform:translate(9px,-6px) rotate(5deg)}}
+@media(prefers-reduced-motion:reduce){.authlayout,.authstory:after{animation:none}}
