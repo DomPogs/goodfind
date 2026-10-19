@@ -30,3 +30,5 @@ body{background:radial-gradient(ellipse at 12% 16%,#e6f0e3 0,transparent 36rem),
 @keyframes auth-arrive{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes auth-orbit{from{transform:translate(-8px,4px) rotate(-5deg)}to{transform:translate(9px,-6px) rotate(5deg)}}
 @media(prefers-reduced-motion:reduce){.authlayout,.authstory:after{animation:none}}
+
+.auth-tools{display:flex;align-items:center;gap:13px}

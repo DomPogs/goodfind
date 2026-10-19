@@ -1,0 +1,265 @@
+html[data-theme="dark"]{color-scheme:dark;--ink:#edf3ed;--muted:#aab7ad;--line:#344238;--paper:#1b261f;--canvas:#111a14;--green:#6eae83;--green2:#22382b;--brand-green:#236b50;--lime:#c9df68;--shadow:0 12px 35px #0005}
+.theme-toggle{display:inline-grid;place-items:center;flex:0 0 auto;width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:11px;background:var(--paper);color:var(--ink);font-size:19px;line-height:1;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.theme-toggle:hover{transform:translateY(-1px);border-color:var(--green);background:var(--green2)}
+.theme-toggle:focus-visible{outline:3px solid color-mix(in srgb,var(--green) 35%,transparent);outline-offset:2px}
+html[data-theme="dark"] body{background:linear-gradient(#151f18 0 82px,var(--canvas) 82px)!important;color:var(--ink)}
+html[data-theme="dark"] .topbar,html[data-theme="dark"] .authbar,html[data-theme="dark"] .admin-topbar{background:#151f18!important;border-color:var(--line)!important}
+html[data-theme="dark"] .landing-header{background:transparent}
+html[data-theme="dark"] .navlinks,html[data-theme="dark"] .navlinks a,html[data-theme="dark"] .iconbtn,html[data-theme="dark"] .backlink,html[data-theme="dark"] .landing-nav,html[data-theme="dark"] .landing-signin{color:#b9c7bd}
+html[data-theme="dark"] .hero p,html[data-theme="dark"] .section-intro,html[data-theme="dark"] .step-card p,html[data-theme="dark"] .feature-copy p,html[data-theme="dark"] .landing-cta p{color:#b2c0b6}
+html[data-theme="dark"] .landing-hero{background:linear-gradient(118deg,#1b2c21 0%,#202d22 100%)}
+html[data-theme="dark"] .landing-hero:before{background:#ffffff0b}
+html[data-theme="dark"] .landing-hero:after{background:#d5f36b18}
+html[data-theme="dark"] .hero-copy h1 span,html[data-theme="dark"] .feature-points span:before{color:var(--green)}
+html[data-theme="dark"] .hero-proof,html[data-theme="dark"] .landing-strip{color:#a7b8aa}
+html[data-theme="dark"] .proof-dots i{border-color:#203126}
+html[data-theme="dark"] .art-orbit{border-color:#ffffff24;box-shadow:0 0 0 33px #ffffff0a,0 0 0 68px #ffffff06}
+html[data-theme="dark"] .art-card{background:#202d24dd;border-color:#ffffff20}
+html[data-theme="dark"] .art-product{background:linear-gradient(155deg,#293d2d,#303a2b)}
+html[data-theme="dark"] .art-card-note,html[data-theme="dark"] .art-card-note small,html[data-theme="dark"] .art-chip,html[data-theme="dark"] .art-float{color:#e1e9df}
+html[data-theme="dark"] .art-chip .chip-icon,html[data-theme="dark"] .art-float b{background:#314735;color:#d5f36b}
+html[data-theme="dark"] .step-card,html[data-theme="dark"] .authlayout,html[data-theme="dark"] .authformside,html[data-theme="dark"] .admin-login,html[data-theme="dark"] .metric-card,html[data-theme="dark"] .admin-panel{background:var(--paper)!important;border-color:var(--line)!important;color:var(--ink)}
+html[data-theme="dark"] .step-icon,html[data-theme="dark"] .step-card:nth-child(2) .step-icon,html[data-theme="dark"] .step-card:nth-child(3) .step-icon{background:#263a2b;color:var(--green)}
+html[data-theme="dark"] .landing-feature{background:#1a251d}
+html[data-theme="dark"] .feature-visual{background:linear-gradient(145deg,#263a2b,#1d3025)}
+html[data-theme="dark"] .feature-visual:before,html[data-theme="dark"] .feature-visual:after{background:#ffffff0a}
+html[data-theme="dark"] .feature-pins,html[data-theme="dark"] .feature-pins:before,html[data-theme="dark"] .feature-pins:after{border-color:#ffffff32}
+html[data-theme="dark"] .landing-cta{background:#1d4a35}
+html[data-theme="dark"] .landing-footer{border-color:var(--line);color:#aab7ad}
+html[data-theme="dark"] .footer-brand{color:var(--green)}
+html[data-theme="dark"] .authstory{background:linear-gradient(145deg,#203629,#252f23)}
+html[data-theme="dark"] .authstory p,html[data-theme="dark"] .authquote{color:#bfcbc1}
+html[data-theme="dark"] .authquote{background:#1b261f99;border-color:#405044}
+html[data-theme="dark"] .authswitch{background:#121b15}
+html[data-theme="dark"] .authswitch button.active{background:#26352a;color:var(--green)}
+html[data-theme="dark"] .authlegal,html[data-theme="dark"] .authpreview{color:#aab7ad}
+html[data-theme="dark"] .admin-page{background:var(--canvas)!important;color:var(--ink)}
+html[data-theme="dark"] .admin-sidebar,html[data-theme="dark"] .admin-login,html[data-theme="dark"] .admin-panel,html[data-theme="dark"] .metric-card,html[data-theme="dark"] .date-chip,html[data-theme="dark"] .admin-search,html[data-theme="dark"] .adminstats div{background:var(--paper)!important;border-color:var(--line)!important;color:var(--ink)}
+html[data-theme="dark"] .sidebar-link,html[data-theme="dark"] .sidebar-bottom a,html[data-theme="dark"] .metric-top,html[data-theme="dark"] .metric-card small,html[data-theme="dark"] .panel-heading p,html[data-theme="dark"] .admin-help,html[data-theme="dark"] .admin-word{color:#aab7ad!important}
+html[data-theme="dark"] .sidebar-link.active,html[data-theme="dark"] .admin-user-avatar{background:#263a2b;color:var(--green)}
+html[data-theme="dark"] .preview-chip{background:#344126;color:#d5f36b}
+html[data-theme="dark"] .preview-banner{background:#292c1d;border-color:#494a2d;color:#e2d99a}
+html[data-theme="dark"] .admin-help code{background:#263229;color:#dce7dc}
+html[data-theme="dark"] .field label,html[data-theme="dark"] .choice label{color:#c3cec5}
+html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] .tradeoffer select,html[data-theme="dark"] .sortcontrol select,html[data-theme="dark"] .searchbox,html[data-theme="dark"] .filterbtn,html[data-theme="dark"] .map-control,html[data-theme="dark"] .authnav:not(.authnav-primary),html[data-theme="dark"] .row-action{background:#17221b!important;color:var(--ink)!important;border-color:var(--line)!important}
+html[data-theme="dark"] input::placeholder,html[data-theme="dark"] textarea::placeholder{color:#87968b}
+html[data-theme="dark"] .field input:focus,html[data-theme="dark"] .field select:focus,html[data-theme="dark"] .field textarea:focus{border-color:var(--green)!important;box-shadow:0 0 0 3px #78c79725}
+html[data-theme="dark"] .tab{color:#b5c1b8}
+html[data-theme="dark"] .tab:hover:not(.active),html[data-theme="dark"] .close,html[data-theme="dark"] .tradeoffer,html[data-theme="dark"] .adminstats div,html[data-theme="dark"] .trust,html[data-theme="dark"] .map-view{background:#1b2920!important;color:var(--ink);border-color:var(--line)}
+html[data-theme="dark"] .tab.active{color:#101a13}
+html[data-theme="dark"] .trust p,html[data-theme="dark"] .trustitems,html[data-theme="dark"] .map-title small,html[data-theme="dark"] .map-note{color:#aab7ad}
+html[data-theme="dark"] .card{background:linear-gradient(150deg,#1b261f,#202d24)!important;border-color:#344238!important}
+html[data-theme="dark"] .cardbody{background:radial-gradient(ellipse at 100% 0%,#2b3b2b80 0,transparent 58%),linear-gradient(180deg,#1b261f,#1d2921)!important;color:var(--ink)}
+html[data-theme="dark"] .searchbox input,html[data-theme="dark"] .admin-search input{background:transparent;color:var(--ink)}
+html[data-theme="dark"] .map-toggle{background:#223b2c;border-color:#3c6147;color:#b7e0c1}
+html[data-theme="dark"] .listings-map{background:#202b23;border-color:var(--line)}
+html[data-theme="dark"] .modal{background:#1b261f!important;color:var(--ink)}
+html[data-theme="dark"] .modal .photo-upload,html[data-theme="dark"] .modal .photo-thumb{background:#202d24;border-color:#405044}
+html[data-theme="dark"] .messages-fab::before{background:#1b261f;border-color:#344238;color:var(--ink)}
+html[data-theme="dark"] .authnotice,html[data-theme="dark"] .admin-message{background:#20392a;color:#a9e0b9}
+html[data-theme="dark"] .authnotice.error,html[data-theme="dark"] .admin-message.error{background:#3a211e;color:#ffb6a4}
+@media(max-width:620px){html[data-theme="dark"] body{background:linear-gradient(#151f18 0 70px,var(--canvas) 70px)!important}}
+
+html[data-theme="dark"] #filterpanel{background:var(--paper)!important;border-color:var(--line)!important}
+@media(max-width:430px){.navright>.theme-toggle{width:29px;height:31px;border-radius:9px;font-size:16px}}
+
+/* Keep dark mode anchored to YouFind's forest green and soft green palette. */
+html[data-theme="dark"] .sellbtn,html[data-theme="dark"] .primary,html[data-theme="dark"] .authnav-primary,html[data-theme="dark"] .map-control-primary,html[data-theme="dark"] .landing-button:not(.outline):not(.light){background:#236b50!important;border-color:#236b50!important;color:#fff!important}
+html[data-theme="dark"] .sellbtn:hover,html[data-theme="dark"] .primary:hover,html[data-theme="dark"] .authnav-primary:hover,html[data-theme="dark"] .landing-button:not(.outline):not(.light):hover{background:#19583f!important;border-color:#19583f!important}
+html[data-theme="dark"] .landing-button.light{background:#e6f3eb!important;color:#236b50!important}
+html[data-theme="dark"] .landing-button.outline{background:transparent!important;color:#9bc9aa!important;border-color:#4b7357!important}
+html[data-theme="dark"] .messages-fab{background:linear-gradient(145deg,#347f62 0%,#236b50 55%,#174d39 100%)}
+html[data-theme="dark"] .tab.active{background:linear-gradient(135deg,#287451,#1e6247);color:#fff}
+
+/* Blue-gray night palette; light mode retains YouFind's green brand colors. */
+html[data-theme="dark"]{--ink:#e3edf2;--muted:#a7bac5;--line:#31434e;--paper:#192630;--canvas:#101920;--green:#95bccc;--green2:#203743;--brand-green:#2b4c59;--lime:#beceda;--shadow:0 12px 35px #0006}
+html[data-theme="dark"] body{background:linear-gradient(#151f27 0 82px,var(--canvas) 82px)!important;color:var(--ink)}
+html[data-theme="dark"] .topbar,html[data-theme="dark"] .authbar,html[data-theme="dark"] .admin-topbar{background:#151f27!important;border-color:var(--line)!important}
+html[data-theme="dark"] .navlinks,html[data-theme="dark"] .navlinks a,html[data-theme="dark"] .iconbtn,html[data-theme="dark"] .backlink,html[data-theme="dark"] .landing-nav,html[data-theme="dark"] .landing-signin{color:#b3c5cf}
+html[data-theme="dark"] .landing-hero{background:linear-gradient(118deg,#1b2b35 0%,#223844 100%)}
+html[data-theme="dark"] .landing-hero:after{background:#95bccc20}
+html[data-theme="dark"] .art-orbit{border-color:#95bccc32;box-shadow:0 0 0 33px #95bccc0b,0 0 0 68px #95bccc06}
+html[data-theme="dark"] .art-card{background:#243743e8;border-color:#95bccc30}
+html[data-theme="dark"] .art-product{background:linear-gradient(155deg,#2b4651,#263a46)}
+html[data-theme="dark"] .art-vase{background:linear-gradient(90deg,#3e7084,#6795a8 46%,#315a6a);box-shadow:inset -14px 0 20px #142b3650,0 13px 18px #08151b55}
+html[data-theme="dark"] .art-vase:before{background:#456f80}
+html[data-theme="dark"] .art-stem,html[data-theme="dark"] .art-stem:before,html[data-theme="dark"] .art-stem:after,html[data-theme="dark"] .art-leaf{background:#6e9daf}
+html[data-theme="dark"] .art-card-note,html[data-theme="dark"] .art-card-note small,html[data-theme="dark"] .art-chip,html[data-theme="dark"] .art-float{color:#e3edf2}
+html[data-theme="dark"] .art-chip .chip-icon,html[data-theme="dark"] .art-float b,html[data-theme="dark"] .step-icon,html[data-theme="dark"] .step-card:nth-child(2) .step-icon,html[data-theme="dark"] .step-card:nth-child(3) .step-icon{background:#294452;color:#a6cbd9}
+html[data-theme="dark"] .landing-feature{background:#192630}
+html[data-theme="dark"] .feature-visual{background:linear-gradient(145deg,#263e4a,#1b2d38)}
+html[data-theme="dark"] .feature-pins,html[data-theme="dark"] .feature-pins:before,html[data-theme="dark"] .feature-pins:after{border-color:#95bccc40}
+html[data-theme="dark"] .pin,html[data-theme="dark"] .pin.pin-a,html[data-theme="dark"] .pin.pin-b,html[data-theme="dark"] .pin.pin-c{background:#2b4c59;color:#e3edf2}
+html[data-theme="dark"] .landing-cta{background:#203b49}
+html[data-theme="dark"] .authstory{background:linear-gradient(145deg,#1e3541,#263943)}
+html[data-theme="dark"] .authquote{background:#19263099;border-color:#3a5260;color:#c3d1d9}
+html[data-theme="dark"] .authswitch button.active{background:#29404c;color:#b6d2de}
+html[data-theme="dark"] .sidebar-link.active,html[data-theme="dark"] .admin-user-avatar{background:#29404c;color:#a6cbd9}
+html[data-theme="dark"] .preview-chip{background:#30434e;color:#beceda}
+html[data-theme="dark"] .adminstats div{background:#1e303b!important}
+html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] .tradeoffer select,html[data-theme="dark"] .sortcontrol select,html[data-theme="dark"] .searchbox,html[data-theme="dark"] .filterbtn,html[data-theme="dark"] .map-control,html[data-theme="dark"] .authnav:not(.authnav-primary),html[data-theme="dark"] .row-action{background:#17242d!important;color:var(--ink)!important;border-color:var(--line)!important}
+html[data-theme="dark"] .tab.active{background:linear-gradient(135deg,#365f72,#2b4c59);color:#fff}
+html[data-theme="dark"] .trust,html[data-theme="dark"] .map-view,html[data-theme="dark"] .tradeoffer,html[data-theme="dark"] .tab:hover:not(.active),html[data-theme="dark"] .close{background:#1d303b!important;border-color:#344a57!important;color:var(--ink)}
+html[data-theme="dark"] .card{background:linear-gradient(150deg,#192630,#1d2d37)!important;border-color:#31434e!important}
+html[data-theme="dark"] .cardbody{background:radial-gradient(ellipse at 100% 0%,#2b465166 0,transparent 58%),linear-gradient(180deg,#192630,#1b2a34)!important;color:var(--ink)}
+html[data-theme="dark"] .map-toggle{background:#203743;border-color:#3a5b6b;color:#b7d6e1}
+html[data-theme="dark"] .listings-map{background:#1b2a34;border-color:var(--line)}
+html[data-theme="dark"] .sellbtn,html[data-theme="dark"] .primary,html[data-theme="dark"] .authnav-primary,html[data-theme="dark"] .map-control-primary,html[data-theme="dark"] .landing-button:not(.outline):not(.light){background:#2b4c59!important;border-color:#2b4c59!important;color:#fff!important}
+html[data-theme="dark"] .sellbtn:hover,html[data-theme="dark"] .primary:hover,html[data-theme="dark"] .authnav-primary:hover,html[data-theme="dark"] .landing-button:not(.outline):not(.light):hover{background:#203b49!important;border-color:#203b49!important}
+html[data-theme="dark"] .landing-button.light{background:#beceda!important;color:#203b49!important}
+html[data-theme="dark"] .landing-button.outline{background:transparent!important;color:#a6cbd9!important;border-color:#486574!important}
+html[data-theme="dark"] .messages-fab{background:linear-gradient(145deg,#497d91 0%,#2b4c59 55%,#1b3542 100%)}
+html[data-theme="dark"] .messages-fab.has-unread::after{border-color:#75a9bd}
+html[data-theme="dark"] .photo-upload,html[data-theme="dark"] .photo-thumb{background:#1d2e39!important;border-color:#3c5360!important}
+html[data-theme="dark"] .modal{background:#192630!important;color:var(--ink)}
+html[data-theme="dark"] .modal .primary{background:#2b4c59!important}
+
+/* Carry the blue-gray theme through branding and typography as well as surfaces. */
+html[data-theme="dark"]{--ink:#dce9ef;--muted:#a7bdc9}
+html[data-theme="dark"] .logo,html[data-theme="dark"] .landing-brand,html[data-theme="dark"] .footer-brand{color:#a6cbd9!important}
+html[data-theme="dark"] .logo-mark,html[data-theme="dark"] .brand-mark{background:#2b4c59!important;color:#dce9ef!important}
+html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3,html[data-theme="dark"] .admin-heading,html[data-theme="dark"] .modalhead{color:#dce9ef}
+html[data-theme="dark"] .hero-copy h1 span,html[data-theme="dark"] .eyebrow,html[data-theme="dark"] .section-kicker,html[data-theme="dark"] .footer-brand,html[data-theme="dark"] .feature-points span:before{color:#95bccc!important}
+html[data-theme="dark"] .eyebrow:before{background:#95bccc}
+html[data-theme="dark"] .hero-copy>p,html[data-theme="dark"] .hero-proof,html[data-theme="dark"] .landing-strip,html[data-theme="dark"] .section-intro,html[data-theme="dark"] .step-card p,html[data-theme="dark"] .feature-copy p,html[data-theme="dark"] .landing-cta p{color:#a7bdc9}
+html[data-theme="dark"] .landing-cta h2{color:#dce9ef}
+html[data-theme="dark"] .sellerline,html[data-theme="dark"] .sub,html[data-theme="dark"] .location,html[data-theme="dark"] .price small,html[data-theme="dark"] .trust p,html[data-theme="dark"] .trustitems,html[data-theme="dark"] .map-title small,html[data-theme="dark"] .map-note{color:#a7bdc9!important}
+html[data-theme="dark"] .sellerline .mini{background:#294452;color:#a6cbd9}
+html[data-theme="dark"] .field label,html[data-theme="dark"] .choice label{color:#c6d7df}
+html[data-theme="dark"] .admin-user,html[data-theme="dark"] .admin-user small{color:#c6d7df!important}
+html[data-theme="dark"] .admin-user small,html[data-theme="dark"] .sidebar-label,html[data-theme="dark"] .sidebar-bottom a{color:#a7bdc9!important}
+html[data-theme="dark"] .authstory p,html[data-theme="dark"] .authquote,html[data-theme="dark"] .authlegal,html[data-theme="dark"] .authpreview{color:#b7cbd5}
+html[data-theme="dark"] .authquote strong{color:#dce9ef}
+html[data-theme="dark"] .admin-help,html[data-theme="dark"] .metric-top,html[data-theme="dark"] .metric-card small,html[data-theme="dark"] .panel-heading p,html[data-theme="dark"] .table-foot,html[data-theme="dark"] td{color:#a7bdc9!important}
+html[data-theme="dark"] .admin-heading h1,html[data-theme="dark"] .admin-panel h2,html[data-theme="dark"] .metric-card>strong,html[data-theme="dark"] .panel-heading h2{color:#dce9ef}
+html[data-theme="dark"] .tab,html[data-theme="dark"] .sortcontrol,html[data-theme="dark"] .filterbtn,html[data-theme="dark"] .map-toggle{color:#b7cbd5}
+html[data-theme="dark"] .adminnav{background:#203743!important;color:#a6cbd9!important;border-color:#3e5f6e!important}
+html[data-theme="dark"] .theme-toggle{color:#a6cbd9}
+
+/* Marketplace hero banner uses hard-coded light-mode colors, so override its full surface in dark mode. */
+html[data-theme="dark"] .hero{background:linear-gradient(112deg,#1b2b35 0%,#203640 52%,#263b45 100%)!important;border-color:#38515e!important;box-shadow:0 14px 38px #050d12a0}
+html[data-theme="dark"] .hero:after{border-color:#95bccc38;box-shadow:0 0 0 28px #95bccc12,0 0 0 62px #95bccc0b,0 0 0 100px #95bccc07}
+html[data-theme="dark"] .hero h1{color:#dce9ef!important}
+html[data-theme="dark"] .hero h1 span{color:#95bccc!important}
+html[data-theme="dark"] .hero .eyebrow{background:#203743dd;border-color:#3b5a68;color:#a6cbd9!important}
+html[data-theme="dark"] .hero .eyebrow:before{background:#95bccc}
+html[data-theme="dark"] .hero p{color:#a7bdc9!important}
+html[data-theme="dark"] .hero-stat{background:#192630dd;border-color:#3b515d}
+html[data-theme="dark"] .hero-stat strong{color:#dce9ef}
+html[data-theme="dark"] .hero-stat small{color:#a7bdc9}
+
+/* Listing cards also define their own light-mode price and action colors. */
+html[data-theme="dark"] .card .price{color:#a6cbd9!important}
+html[data-theme="dark"] .card .price small{color:#9bb4c1!important}
+html[data-theme="dark"] .card .tradeTag{background:#203743!important;border:1px solid #3e5f6e!important;color:#a6cbd9!important}
+html[data-theme="dark"] .card .card-actions .card-action{background:#2b4c59!important;border-color:#2b4c59!important;color:#e3edf2!important;box-shadow:0 4px 10px #08151b66}
+html[data-theme="dark"] .card .card-actions .card-action:hover{background:#365f72!important;border-color:#365f72!important}
+html[data-theme="dark"] .card .card-actions .card-trade-action{background:#203743!important;border-color:#3e5f6e!important;color:#a6cbd9!important}
+html[data-theme="dark"] .card .card-actions .card-trade-action:hover{background:#294452!important;border-color:#5a8193!important;color:#dce9ef!important}
+
+/* Listing form uses the active theme for its section chrome and controls. */
+html[data-theme="dark"] .sell-head,html[data-theme="dark"] .sell-section,html[data-theme="dark"] .sell-form-footer{border-color:#31434e}
+html[data-theme="dark"] .sell-head-icon,html[data-theme="dark"] .sell-section-number,html[data-theme="dark"] .sell-choice-icon,html[data-theme="dark"] .sell-trade-icon{background:#203743;color:#95bccc}
+html[data-theme="dark"] .sell-kicker,html[data-theme="dark"] .sell-steps .sell-step-active{color:#95bccc}
+html[data-theme="dark"] .sell-steps{background:#17242d;color:#a7bdc9;border-color:#31434e}
+html[data-theme="dark"] .sell-steps i{background:#192630;border-color:#3b5360;color:#a7bdc9}
+html[data-theme="dark"] .sell-steps .sell-step-active i{background:#2b4c59;border-color:#2b4c59;color:#fff}
+html[data-theme="dark"] .sell-type-choice label,html[data-theme="dark"] .sell-trade-option,html[data-theme="dark"] .sell-optional,html[data-theme="dark"] .sell-cancel{background:#192630;color:#dce9ef;border-color:#31434e}
+html[data-theme="dark"] .sell-type-choice label.selected{background:#203743;border-color:#5a8193}
+html[data-theme="dark"] .sell-type-choice label strong,html[data-theme="dark"] .sell-trade-option strong,html[data-theme="dark"] .sell-head-copy h2,html[data-theme="dark"] .sell-section-head h3{color:#dce9ef}
+html[data-theme="dark"] .sell-type-choice label small,html[data-theme="dark"] .sell-section-head p,html[data-theme="dark"] .sell-head-copy p,html[data-theme="dark"] .sell-footer-note,html[data-theme="dark"] .sell-optional,html[data-theme="dark"] .sell-trade-option small,html[data-theme="dark"] .sell-field-note{color:#a7bdc9}
+html[data-theme="dark"] .sell-price-field{background:#17242d;border-color:#31434e}
+html[data-theme="dark"] .sell-price-field>span{background:#203743;border-color:#31434e;color:#a6cbd9}
+html[data-theme="dark"] .sell-form-grid .sell-price-field input{background:transparent!important;color:#dce9ef!important}
+html[data-theme="dark"] .sell-trade-option:has(input:checked){background:#203743;border-color:#5a8193}
+html[data-theme="dark"] .sell-toggle-indicator{background:#3b5360}
+html[data-theme="dark"] .sell-trade-option:has(input:checked) .sell-toggle-indicator{background:#2b4c59}
+html[data-theme="dark"] .sell-cancel:hover{background:#203743;color:#dce9ef}
+
+/* Remove remaining light-mode green accents from dark-mode content and controls. */
+html[data-theme="dark"] .card h3,
+html[data-theme="dark"] .empty strong,
+html[data-theme="dark"] .trust strong,
+html[data-theme="dark"] .detail-heading-copy h2,
+html[data-theme="dark"] .detail-seller-copy strong,
+html[data-theme="dark"] .detail-fact>strong,
+html[data-theme="dark"] .detail-description h3,
+html[data-theme="dark"] .detail-owner-note strong,
+html[data-theme="dark"] .photo-upload-intro strong,
+html[data-theme="dark"] .photo-selection-summary strong,
+html[data-theme="dark"] .profile-name,
+html[data-theme="dark"] .profile-summary strong{color:#dce9ef!important}
+
+html[data-theme="dark"] .sellerline .verified,
+html[data-theme="dark"] .detail-verified,
+html[data-theme="dark"] .detail-type span:first-child,
+html[data-theme="dark"] .detailprice,
+html[data-theme="dark"] .detail-owner-note,
+html[data-theme="dark"] .detail-trade-pill,
+html[data-theme="dark"] .condition-tag,
+html[data-theme="dark"] .photo-thumb-cover,
+html[data-theme="dark"] .detail-photo-thumb.active{background:#203743!important;border-color:#3e5f6e!important;color:#a6cbd9!important}
+
+html[data-theme="dark"] .detail-seller-avatar,
+html[data-theme="dark"] .trusticon,
+html[data-theme="dark"] .sellerline .mini,
+html[data-theme="dark"] .photo-thumb-label,
+html[data-theme="dark"] .photo-make-cover,
+html[data-theme="dark"] .photo-count-badge,
+html[data-theme="dark"] .detail-photo-thumb span{background:#203743!important;border-color:#3e5f6e!important;color:#b7cbd5!important}
+
+html[data-theme="dark"] .detail-actions .filterbtn,
+html[data-theme="dark"] .detail-actions .detail-trade-button,
+html[data-theme="dark"] .card .card-trade-action,
+html[data-theme="dark"] .photo-thumb-remove,
+html[data-theme="dark"] .profile-edit-btn,
+html[data-theme="dark"] .profile-upload,
+html[data-theme="dark"] .profile-remove{background:#203743!important;border-color:#3e5f6e!important;color:#a6cbd9!important}
+
+html[data-theme="dark"] .card-actions button:not(.card-trade-action),
+html[data-theme="dark"] .detail-actions .primary,
+html[data-theme="dark"] .profileform .primary,
+html[data-theme="dark"] #profileform .primary,
+html[data-theme="dark"] .authform .primary,
+html[data-theme="dark"] .admin-login .primary,
+html[data-theme="dark"] .map-control-primary{background:#2b4c59!important;border-color:#2b4c59!important;color:#e3edf2!important}
+
+html[data-theme="dark"] .photo-thumb-remove:hover,
+html[data-theme="dark"] .detail-actions .filterbtn:hover,
+html[data-theme="dark"] .profile-edit-btn:hover,
+html[data-theme="dark"] .profile-upload:hover{background:#294452!important;border-color:#5a8193!important;color:#dce9ef!important}
+
+html[data-theme="dark"] .detail-type,
+html[data-theme="dark"] .detail-seller-copy small,
+html[data-theme="dark"] .detail-label,
+html[data-theme="dark"] .detail-fact>span,
+html[data-theme="dark"] .detail-description p,
+html[data-theme="dark"] .detail-owner-note span,
+html[data-theme="dark"] .photo-upload-intro small,
+html[data-theme="dark"] .photo-selection-summary,
+html[data-theme="dark"] .photo-upload-multiple .photo-input,
+html[data-theme="dark"] .card-detail-row .location,
+html[data-theme="dark"] .detail-photo-count{color:#a7bdc9!important}
+
+html[data-theme="dark"] .detail-fact-place svg,
+html[data-theme="dark"] .card-detail-row .location svg{stroke:#95bccc!important}
+
+html[data-theme="dark"] .authstory h1 span,
+html[data-theme="dark"] .authswitch button.active,
+html[data-theme="dark"] .admin-login a,
+html[data-theme="dark"] .metric-card .metric-value,
+html[data-theme="dark"] .admin-user-avatar{color:#a6cbd9!important}
+html[data-theme="dark"] .authswitch button.active,
+html[data-theme="dark"] .sidebar-link.active{background:#203743!important;border-color:#3e5f6e!important}
+
+html[data-theme="dark"] .card .price,
+html[data-theme="dark"] .detailprice,
+html[data-theme="dark"] .profile-stat strong{color:#a6cbd9!important}
+html[data-theme="dark"] .detail-owner-note{background:#192630!important}
+html[data-theme="dark"] .detail-actions button:disabled{background:#24333c!important;border-color:#394d58!important;color:#91a5af!important}
+
+html[data-theme="dark"] button:not(.danger):not(.delete-btn):not(.photo-thumb-remove){border-color:#3e5f6e;color:#a6cbd9}
+html[data-theme="dark"] button:not(.primary):not(.sellbtn):not(.authnav-primary):not(.landing-button):not(.map-control-primary):not(.card-action):not(.danger):not(.delete-btn):not(.photo-thumb-remove){background-color:#203743}
+html[data-theme="dark"] button:not(.danger):not(.delete-btn):not(.photo-thumb-remove):hover{border-color:#5a8193;color:#dce9ef}
+html[data-theme="dark"] a.adminnav,html[data-theme="dark"] a.adminnav:hover{background:#203743!important;border-color:#3e5f6e!important;color:#a6cbd9!important}
+html[data-theme="dark"] .authform a,html[data-theme="dark"] .detail-description a,html[data-theme="dark"] .profile-link{color:#95bccc!important}

@@ -32,9 +32,9 @@ function notify(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('show');
   clearTimeout(window._toast); window._toast = setTimeout(() => toast.classList.remove('show'), 2800);
 }
-function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
+function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal','sell-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
 function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
-function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal'); }
+function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal','sell-modal'); }
 function setListings(rows) { listings.splice(0,listings.length,...rows); }
 function messageReadKey(listingId,otherId) { return `goodfind-message-read:${currentUser?.id}:${listingId}:${otherId}`; }
 function updateMessagesBadge(conversations) {
@@ -258,15 +258,36 @@ async function moderateListing(id,status) {
 
 function openSell() {
   if (!currentUser) { openAccount(); notify('Sign in to publish a listing.'); return; }
-  showModal(`<div class="modalhead"><div><h2>List something good</h2><p>Add an item for sale, trade, or both.</p></div><button class="close" onclick="closeModal()">×</button></div>
-  <form id="sellform"><div class="field"><label>What are you listing?</label><input name="title" required maxlength="100" placeholder="e.g. Handmade ceramic bowl"></div>
-  <div class="field"><label>Type</label><div class="choice" role="radiogroup" aria-label="Listing type"><label class="selected"><input type="radio" name="kind" value="physical" checked> Physical good</label><label><input type="radio" name="kind" value="digital"> Digital good</label></div></div>
-  <div class="field"><label>Category</label><select name="category"><option>Home & living</option><option>Art & prints</option><option>Tech</option><option>Gaming</option><option>Photography</option><option>Accessories</option><option>Digital art</option><option>Templates</option><option>Music</option><option>Other</option></select></div>
-  <div class="field"><label>Price (PHP)</label><input name="price" type="number" min="1" max="1000000" step="0.01" required placeholder="0.00"></div>
-  <div class="field"><label for="itemPhoto">Item photos <span class="optional-label">Optional · up to 10</span></label><div class="photo-upload photo-upload-multiple"><div class="photo-upload-intro"><span class="photo-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span><strong>Add item photos</strong><small>Choose up to 10 pictures. Your first photo will be the cover.</small></span></div><input id="itemPhoto" name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple class="photo-input"><small class="field-help">JPG, PNG, or WebP · up to 8 MB each</small></div><div class="photo-selection-summary"><strong id="photoCount">0 of 10 photos selected</strong><span>Photos are compressed before publishing.</span></div><div id="photoPreviewGrid" class="photo-preview-grid" aria-live="polite"></div></div>  <div class="field"><label>Condition or delivery</label><input name="condition" maxlength="40" placeholder="Good, new, instant download..."></div>
-  <div class="field" id="schoolfield"><label>Which school community is this item for?</label><select name="place" required><option value="" disabled selected>Choose a school</option><option>UM Panabo College</option><option>Aces Polytechnic College</option><option>Southern Davao National High School</option></select></div>
-  <div class="field"><label>Details</label><textarea name="description" required maxlength="2000" placeholder="Condition, what's included, delivery details..."></textarea></div>
-    <div class="field"><label><input type="checkbox" name="trade" style="accent-color:var(--green)"> Open to trade offers</label></div><button type="submit" class="primary">Publish listing</button></form>`);
+  showModal(`<div class="sell-head">
+    <div class="sell-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></div>
+    <div class="sell-head-copy"><span class="sell-kicker">SELL ON YOUFIND</span><h2>Create a listing</h2><p>Add clear details and photos to help your item find a new home.</p></div>
+    <button class="close" type="button" onclick="closeModal()" aria-label="Close listing form">&#215;</button>
+  </div>
+  <div class="sell-steps" aria-label="Listing steps"><span class="sell-step-active"><i>1</i> Item details</span><span><i>2</i> Photos</span><span><i>3</i> Publish</span></div>
+  <form id="sellform">
+    <section class="sell-section" aria-labelledby="sell-details-title">
+      <div class="sell-section-head"><span class="sell-section-number">01</span><div><h3 id="sell-details-title">Item details</h3><p>Start with the basics buyers need to know.</p></div></div>
+      <div class="sell-form-grid">
+        <div class="field sell-field-wide"><label for="itemTitle">Listing title</label><input id="itemTitle" name="title" required maxlength="100" placeholder="e.g. Handmade ceramic bowl"></div>
+        <div class="field sell-field-wide"><label>What are you listing?</label><div class="choice sell-type-choice" role="radiogroup" aria-label="Listing type"><label class="selected"><input type="radio" name="kind" value="physical" checked><span class="sell-choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 8 8-4 8 4v9l-8 4-8-4zM4 8l8 4 8-4M12 12v9M8 6l8 4"/></svg></span><span><strong>Physical item</strong><small>An item you can hand over</small></span></label><label><input type="radio" name="kind" value="digital"><span class="sell-choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h5M9 13h6m-6 4h6"/></svg></span><span><strong>Digital item</strong><small>A file or digital product</small></span></label></div></div>
+        <div class="field"><label for="itemCategory">Category</label><select id="itemCategory" name="category"><option>Home & living</option><option>Art & prints</option><option>Tech</option><option>Gaming</option><option>Photography</option><option>Accessories</option><option>Digital art</option><option>Templates</option><option>Music</option><option>Other</option></select></div>
+        <div class="field"><label for="itemPrice">Asking price</label><div class="sell-price-field"><span aria-hidden="true">&#8369;</span><input id="itemPrice" name="price" type="number" min="1" max="1000000" step="0.01" required placeholder="0.00"></div></div>
+        <div class="field"><label id="conditionLabel" for="itemCondition">Condition</label><select id="itemCondition" name="condition"><option value="">Choose a condition</option><option>New</option><option>Like new</option><option>Good</option><option>Fair</option><option>For parts or repair</option></select></div>
+        <div class="field" id="schoolfield"><label for="itemSchool">School community</label><select id="itemSchool" name="place" required><option value="" disabled selected>Choose a school</option><option>UM Panabo College</option><option>Aces Polytechnic College</option><option>Southern Davao National High School</option></select></div>
+        <div class="field sell-field-wide"><label for="itemDescription">Description</label><textarea id="itemDescription" name="description" required maxlength="2000" placeholder="Describe the item's condition, what's included, and any pickup or delivery details."></textarea><small class="sell-field-note">Be specific so members know what to expect.</small></div>
+      </div>
+    </section>
+    <section class="sell-section sell-photo-section" aria-labelledby="sell-photos-title">
+      <div class="sell-section-head"><span class="sell-section-number">02</span><div><h3 id="sell-photos-title">Photos</h3><p>Show the item clearly. The first photo will be your cover image.</p></div><span class="sell-optional">Optional &middot; up to 10</span></div>
+      <div class="field sell-photo-field"><label for="itemPhoto" class="sell-visually-hidden">Choose item photos</label><div class="photo-upload photo-upload-multiple"><div class="photo-upload-intro"><span class="photo-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg></span><span><strong>Add item photos</strong><small>Choose up to 10 JPG, PNG, or WebP images, up to 8 MB each.</small></span></div><input id="itemPhoto" name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple class="photo-input"></div><div class="photo-selection-summary"><strong id="photoCount">0 of 10 photos selected</strong><span>Images are optimized before publishing.</span></div><div id="photoPreviewGrid" class="photo-preview-grid" aria-live="polite"></div></div>
+    </section>
+    <section class="sell-section sell-preference-section" aria-labelledby="sell-preferences-title">
+      <div class="sell-section-head"><span class="sell-section-number">03</span><div><h3 id="sell-preferences-title">Selling preferences</h3><p>Choose whether you&rsquo;re open to swapping items.</p></div></div>
+      <label class="sell-trade-option"><input type="checkbox" name="trade"><span class="sell-trade-icon" aria-hidden="true">&#8644;</span><span><strong>Open to trade offers</strong><small>Members can propose an item in exchange.</small></span><span class="sell-toggle-indicator" aria-hidden="true"></span></label>
+    </section>
+    <div class="sell-form-footer"><button type="button" class="sell-cancel" onclick="closeModal()">Cancel</button><span class="sell-footer-note">You can edit your listing later.</span><button type="submit" class="primary sell-submit">Publish listing <span aria-hidden="true">&#8594;</span></button></div>
+  </form>`);
+  $('#modal').classList.add('sell-modal');
   const schoolField = $('#schoolfield');
   const selectedPhotos=[];
   const photoGrid=$('#photoPreviewGrid');
@@ -295,6 +316,12 @@ function openSell() {
     const physical = $('#sellform input[name="kind"]:checked').value === 'physical';
     schoolField.hidden = !physical;
     schoolField.querySelector('select').required = physical;
+    const conditionLabel = $('#conditionLabel');
+    const conditionSelect = $('#itemCondition');
+    conditionLabel.textContent = physical ? 'Condition' : 'Delivery';
+    conditionSelect.innerHTML = physical
+      ? '<option value="">Choose a condition</option><option>New</option><option>Like new</option><option>Good</option><option>Fair</option><option>For parts or repair</option>'
+      : '<option value="">Choose a delivery method</option><option>Instant download</option><option>Sent after purchase</option><option>Custom delivery</option>';
   }));
   $('#sellform').onsubmit = async event => {
     event.preventDefault(); const form = new FormData(event.currentTarget); const kind = form.get('kind');
