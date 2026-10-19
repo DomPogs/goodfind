@@ -85,3 +85,6 @@ a{color:inherit;text-decoration:none}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
 
 @media(max-width:620px){.landing-actions{gap:10px}.landing-header>.landing-actions>.landing-button{min-height:38px;padding:0 10px;font-size:11px}.landing-header>.landing-actions>.theme-toggle{width:34px;height:34px}}
+
+.landing-admin-link{color:#526056;font-size:13px;font-weight:700}.landing-admin-link:hover{color:var(--green)}
+@media(max-width:850px){.landing-admin-link{display:none}}

@@ -115,8 +115,21 @@ async function requireAdmin(req) { const user = await requireUser(req); if (user
 function sameOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return;
-  const expected = new URL(APP_URL).origin;
-  if (origin !== expected) fail(403, 'This request origin is not allowed.');
+  const expected = new URL(APP_URL);
+  const allowed = new Set([expected.origin]);
+  // XAMPP development commonly serves the page on Apache (port 80) while
+  // the Node API runs on PORT. Treat the usual loopback names as the same
+  // local app, while keeping public hosts restricted to APP_URL exactly.
+  if (expected.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(expected.hostname)) {
+    for (const hostname of ['localhost','127.0.0.1','[::1]']) {
+      for (const port of new Set([80, PORT])) {
+        const candidate = new URL(`http://${hostname}`);
+        if (port !== 80) candidate.port = String(port);
+        allowed.add(candidate.origin);
+      }
+    }
+  }
+  if (!allowed.has(origin)) fail(403, 'This request origin is not allowed.');
 }
 async function readBody(req, raw = false) {
   const chunks = []; let size = 0;
@@ -503,7 +516,7 @@ async function handler(req,res) {
       return res.end();
     }
     const publicFiles = new Map([
-      ['/','index.html'],['/index.html','index.html'],['/landing.css','landing.css'],['/theme.css','theme.css'],['/theme.js','theme.js'],['/marketplace.html','marketplace.html'],['/styles.css','styles.css'],['/data.js','data.js'],['/app.js','app.js'],
+      ['/','index.html'],['/index.html','index.html'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/js/theme.js','assets/js/theme.js'],['/marketplace.html','marketplace.html'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
       ['/auth/','auth/index.html'],['/auth/index.html','auth/index.html'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js'],
       ['/admin/','admin/live.html'],['/admin/index.html','admin/live.html'],['/admin/admin.css','admin/live.css'],['/admin/admin.js','admin/live.js']
     ]);

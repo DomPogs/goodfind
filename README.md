@@ -25,7 +25,7 @@ The sign-in and sign-up forms use a dedicated page and create real accounts. Eve
 - MySQL/MariaDB-backed member listings, trade offers, messages, and orders.
 - The database schema in `database/schema.sql` follows the provided ERD: Users, Categories, Listings, Orders, and Reviews, including its one-to-many and one-review-per-order relationships.
 - Trade offers can be accepted, declined, or withdrawn. Accepted trades mark both listings as traded.
-- The admin panel is at `/admin/` (through XAMPP: `http://localhost/goodfind/admin/`). Create a regular account, set `ADMIN_EMAIL` to that account's email in `.env`, and restart the server. The account can then sign in on the admin page to review marketplace counts and hide or restore listings.
+- The admin panel is at `/admin/` (through the local Goodfind server: `http://localhost:3000/admin/`). Create a regular account, set `ADMIN_EMAIL` to that account's email in `.env`, and restart the server. The account can then sign in on the admin page to review marketplace counts and hide or restore listings.
 - Stripe Connect seller onboarding and hosted Checkout integration are implemented, but payments stay disabled until Stripe is configured.
 - Stripe webhook handling updates payment and connected-account status. Checkout reserves a listing so two buyers cannot purchase it at once.
 
@@ -41,3 +41,11 @@ Use test keys and Stripe test accounts first. Live processing also requires a St
 - School ID and contact details are stored during registration, but the prototype does not verify IDs with the school. Password recovery, review submission UI, seller order approval, image uploads, shipping and tax calculation, and production deployment are not included.
 - Trade messages are stored in the MySQL database. The interface refreshes messages on demand; it does not use live push updates.
 - `.env` and `server-data/` are local/private and excluded from Git.
+
+## Project folders
+
+- `assets/css` and `assets/js` contain shared stylesheets and browser scripts.
+- `admin` and `auth` contain their page-specific files.
+- `database` contains the MySQL schema; `server-data` is reserved for local database data.
+- `logs` contains server log files.
+- The root holds the Node server, package files, environment configuration, and the landing and marketplace pages.
