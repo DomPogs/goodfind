@@ -10,8 +10,12 @@ const { AsyncLocalStorage } = require('node:async_hooks');
 
 const scrypt = promisify(crypto.scrypt);
 const ROOT = __dirname;
+const ADMIN_ROOT_CANDIDATE = path.resolve(ROOT, '..', 'goodfind-admin');
+const ADMIN_ROOT = fs.existsSync(ADMIN_ROOT_CANDIDATE) ? ADMIN_ROOT_CANDIDATE : path.join(ROOT, 'admin');
 const APP_URL = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 const PORT = Number(process.env.PORT || 3000);
+const ADMIN_PORT = Number(process.env.ADMIN_PORT || 3001);
+const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN || `http://localhost:${ADMIN_PORT}`).replace(/\/$/, '');
 const SESSION_DAYS = 30;
 const bodyLimit = 16 * 1024 * 1024;
 const loginAttempts = new Map();
@@ -71,6 +75,12 @@ async function initializeDatabase() {
   if (!Number(photoColumn.n)) await db.prepare('ALTER TABLE listings ADD COLUMN photo_data MEDIUMTEXT NULL').run();
   const profilePhotoColumn = await db.prepare("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='profile_photo'").get();
   if (!Number(profilePhotoColumn.n)) await db.prepare('ALTER TABLE users ADD COLUMN profile_photo MEDIUMTEXT NULL').run();
+  const idPhotoColumn = await db.prepare("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='id_photo_data'").get();
+  if (!Number(idPhotoColumn.n)) await db.prepare('ALTER TABLE users ADD COLUMN id_photo_data MEDIUMTEXT NULL').run();
+  const idStatusColumn = await db.prepare("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='id_verification_status'").get();
+  if (!Number(idStatusColumn.n)) await db.prepare("ALTER TABLE users ADD COLUMN id_verification_status ENUM('unsubmitted','pending','verified','rejected') NOT NULL DEFAULT 'unsubmitted'").run();
+  const idStatusIndex = await db.prepare("SELECT COUNT(*) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND INDEX_NAME='idx_users_id_verification_status'").get();
+  if (!Number(idStatusIndex.n)) await db.prepare('CREATE INDEX idx_users_id_verification_status ON users(id_verification_status)').run();
   await pool.query(`CREATE TABLE IF NOT EXISTS listing_photos (
     listing_id BIGINT UNSIGNED NOT NULL,
     photo_order TINYINT UNSIGNED NOT NULL,
@@ -86,7 +96,15 @@ function send(res, status, payload, headers = {}) {
 }
 function fail(status, message) { throw new HttpError(status, message); }
 function nowIso() { return new Date().toISOString(); }
-function safeUser(row) { return row ? { id:row.id, schoolId:row.school_id, displayName:row.full_name || row.display_name, contactNo:row.contact_no, profilePhoto:row.profile_photo || null, email:row.email, role:row.role || 'buyer', payoutsConnected:Boolean(row.stripe_charges_enabled&&row.stripe_payouts_enabled), createdAt:row.created_at } : null; }
+function safeUser(row) { return row ? { id:row.id, schoolId:row.school_id, displayName:row.full_name || row.display_name, contactNo:row.contact_no, profilePhoto:row.profile_photo || null, idVerificationStatus:row.id_verification_status || 'unsubmitted', email:row.email, role:row.role || 'buyer', payoutsConnected:Boolean(row.stripe_charges_enabled&&row.stripe_payouts_enabled), createdAt:row.created_at } : null; }
+function validateIdPhoto(value) {
+  if (typeof value !== 'string' || value.length > 1500000) fail(400, 'School ID photo must be a JPG image no larger than 1 MB after processing.');
+  const match = value.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/);
+  if (!match) fail(400, 'Upload a JPG, PNG, or WebP image of your school ID.');
+  const bytes=Buffer.from(match[1],'base64');
+  if (bytes.length>1024*1024 || bytes[0]!==0xff || bytes[1]!==0xd8 || bytes[bytes.length-2]!==0xff || bytes[bytes.length-1]!==0xd9) fail(400, 'The school ID photo is invalid or too large.');
+  return value;
+}
 function publicListing(row, includePhotos = false, photos = null) {
   const gallery=photos || (row.photo_data ? [row.photo_data] : []);
   return { id:row.id, sellerId:row.seller_id, title:row.title, seller:row.seller_name,
@@ -129,6 +147,7 @@ function sameOrigin(req) {
       }
     }
   }
+  allowed.add(ADMIN_ORIGIN);
   if (!allowed.has(origin)) fail(403, 'This request origin is not allowed.');
 }
 async function readBody(req, raw = false) {
@@ -202,6 +221,18 @@ function validStripeSignature(raw, header) {
 async function api(req, res, url) {
   const method = req.method;
   const route = url.pathname;
+  const origin=req.headers.origin;
+  if(origin===ADMIN_ORIGIN){
+    res.setHeader('Access-Control-Allow-Origin',ADMIN_ORIGIN);
+    res.setHeader('Access-Control-Allow-Credentials','true');
+    res.setHeader('Access-Control-Allow-Methods','GET, POST, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers','Content-Type');
+    res.setHeader('Vary','Origin');
+  }
+  if(method==='OPTIONS'){
+    if(origin!==ADMIN_ORIGIN)fail(403,'This request origin is not allowed.');
+    res.writeHead(204);return res.end();
+  }
   if (method !== 'GET' && route !== '/api/payments/stripe-webhook') sameOrigin(req);
 
   if (method === 'GET' && route === '/api/health') return send(res, 200, { ok:true, paymentsConfigured:Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET), storage:'mysql' });
@@ -213,8 +244,22 @@ async function api(req, res, url) {
       hiddenListings:Number((await db.prepare("SELECT COUNT(*) AS n FROM listings WHERE status='hidden'").get()).n),
       orders:Number((await db.prepare('SELECT COUNT(*) AS n FROM orders').get()).n)
     };
+    counts.pendingVerifications=Number((await db.prepare("SELECT COUNT(*) AS n FROM users WHERE id_verification_status='pending'").get()).n);
     const rows = await db.prepare("SELECT l.*,c.category_name FROM listings l LEFT JOIN categories c USING(category_id) WHERE l.status IN ('active','hidden') ORDER BY l.created_at DESC LIMIT 100").all();
     return send(res, 200, { counts, listings:rows.map(publicListing) });
+  }
+  if (method === 'GET' && route === '/api/admin/verifications') {
+    await requireAdmin(req);
+    const rows=await db.prepare("SELECT id,full_name,email,school_id,id_photo_data,created_at FROM users WHERE id_verification_status='pending' ORDER BY created_at").all();
+    return send(res,200,{verifications:rows.map(row=>({id:row.id,fullName:row.full_name,email:row.email,schoolId:row.school_id,idPhoto:row.id_photo_data,submittedAt:row.created_at}))});
+  }
+  if (method === 'PATCH' && /^\/api\/admin\/verifications\/\d+$/.test(route)) {
+    await requireAdmin(req);
+    const id=Number(route.split('/').pop());const body=await readBody(req);
+    if(!['verified','rejected'].includes(body.status))fail(400,'Choose verified or rejected.');
+    const result=await db.prepare("UPDATE users SET id_verification_status=?,id_photo_data=NULL WHERE id=? AND id_verification_status='pending'").run(body.status,id);
+    if(!result.changes)fail(404,'Pending ID verification not found.');
+    return send(res,200,{id,status:body.status});
   }
   if (method === 'PATCH' && /^\/api\/admin\/listings\/\d+$/.test(route)) {
     await requireAdmin(req);
@@ -241,6 +286,10 @@ async function api(req, res, url) {
     const schoolId = text(body.schoolId, 40, 'School ID').toUpperCase();
     const contactNo = text(body.contactNo, 25, 'Contact number', 7);
     if (await db.prepare("SELECT 1 FROM users WHERE school_id=? AND id<>? AND school_id<>''").get(schoolId,user.id)) fail(409, 'That school ID is already in use.');
+    const submittedIdPhoto=body.idPhoto?validateIdPhoto(body.idPhoto):null;
+    const idChanged=schoolId!==user.school_id;
+    if(idChanged&&!submittedIdPhoto)fail(400,'Upload a clear photo of your new school ID number.');
+    if(['unsubmitted','rejected'].includes(user.id_verification_status||'unsubmitted')&&!submittedIdPhoto)fail(400,'Upload a clear school ID photo to submit it for admin review.');
     let profilePhoto = null;
     if (body.profilePhoto !== undefined && body.profilePhoto !== null && body.profilePhoto !== '') {
       if (typeof body.profilePhoto !== 'string' || body.profilePhoto.length > 1500000) fail(400, 'Profile photo must be a JPG image no larger than 1 MB after processing.');
@@ -250,7 +299,7 @@ async function api(req, res, url) {
       if (bytes.length > 1024*1024 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[bytes.length-2] !== 0xff || bytes[bytes.length-1] !== 0xd9) fail(400, 'The profile photo is invalid or too large.');
       profilePhoto = body.profilePhoto;
     }
-    await db.prepare('UPDATE users SET school_id=?,display_name=?,full_name=?,contact_no=?,profile_photo=? WHERE id=?').run(schoolId,displayName,displayName,contactNo,profilePhoto,user.id);
+    await db.prepare("UPDATE users SET school_id=?,display_name=?,full_name=?,contact_no=?,profile_photo=?,id_photo_data=COALESCE(?,id_photo_data),id_verification_status=CASE WHEN ? IS NOT NULL THEN 'pending' WHEN ? THEN 'unsubmitted' ELSE id_verification_status END WHERE id=?").run(schoolId,displayName,displayName,contactNo,profilePhoto,submittedIdPhoto,submittedIdPhoto,idChanged,user.id);
     await db.prepare('UPDATE listings SET seller_name=?,initial=? WHERE seller_id=?').run(displayName,displayName.slice(0,2).toUpperCase(),user.id);
     return send(res, 200, { user:safeUser(await db.prepare('SELECT * FROM users WHERE id=?').get(user.id)) });
   }
@@ -260,17 +309,18 @@ async function api(req, res, url) {
     const displayName = text(body.displayName, 60, 'Full name');
     const schoolId = text(body.schoolId, 40, 'School ID').toUpperCase();
     const contactNo = text(body.contactNo, 25, 'Contact number', 7);
+    const idPhoto=validateIdPhoto(body.idPhoto);
     const password = text(body.password, 200, 'Password', 12);
-    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) fail(400, 'Password must include lowercase, uppercase, and a number.');
+    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) fail(400, 'Password must include a lowercase letter, an uppercase letter, a digit, and a special character.');
     if (await db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) fail(409, 'An account with that email already exists.');
     if (await db.prepare("SELECT 1 FROM users WHERE school_id=? AND school_id<>''").get(schoolId)) fail(409, 'An account with that school ID already exists.');
     const salt = crypto.randomBytes(16); const derived = await scrypt(password, salt, 64, { N:1 << 15, r:8, p:1, maxmem:64 * 1024 * 1024 });
-    const result = await db.prepare('INSERT INTO users(school_id,display_name,full_name,contact_no,role,email,password_hash,created_at) VALUES(?,?,?,?,?,?,?,?)')
-      .run(schoolId,displayName,displayName,contactNo,'buyer',email,`scrypt$32768$8$1$${salt.toString('hex')}$${Buffer.from(derived).toString('hex')}`,nowIso());
+    const result = await db.prepare("INSERT INTO users(school_id,display_name,full_name,contact_no,id_photo_data,id_verification_status,role,email,password_hash,created_at) VALUES(?,?,?,?,?,'pending',?,?,?,?)")
+      .run(schoolId,displayName,displayName,contactNo,idPhoto,'buyer',email,`scrypt$32768$8$1$${salt.toString('hex')}$${Buffer.from(derived).toString('hex')}`,nowIso());
     const user = await db.prepare('SELECT * FROM users WHERE id=?').get(Number(result.lastInsertRowid)); await createSession(user, res);
     return send(res, 201, { user:safeUser(user) });
   }
-  if (method === 'POST' && route === '/api/auth/login') {
+  if (method === 'POST' && (route === '/api/auth/login' || route === '/api/admin/login')) {
     rateLimitLogin(req); const body = await readBody(req); const email = text(body.email, 254, 'Email').toLowerCase(); const password = text(body.password, 200, 'Password');
     const user = await db.prepare('SELECT * FROM users WHERE email=?').get(email); const parts = user?.password_hash.split('$') || [];
     let matches = false;
@@ -279,6 +329,9 @@ async function api(req, res, url) {
       matches = crypto.timingSafeEqual(Buffer.from(parts[5], 'hex'), Buffer.from(derived));
     }
     if (!matches) fail(401, 'Email or password is incorrect.');
+    const adminLogin = route === '/api/admin/login';
+    if (adminLogin && user.role !== 'admin') fail(403, 'This account does not have admin access.');
+    if (!adminLogin && user.role === 'admin') fail(403, 'Administrators must sign in from the dedicated admin login page.');
     await createSession(user, res); return send(res, 200, { user:safeUser(user) });
   }
   if (method === 'POST' && route === '/api/auth/logout') { await clearSession(req, res); return send(res, 200, { ok:true }); }
@@ -324,7 +377,8 @@ async function api(req, res, url) {
     const offered = await db.prepare("SELECT * FROM listings WHERE id=? AND status='active'").get(offeredId);
     if (!wanted || !offered) fail(404, 'One of those listings is no longer available.');
     if (!wanted.open_to_trade) fail(400, 'This seller is not accepting trade offers.');
-    if (wanted.seller_id === user.id || offered.seller_id !== user.id || offered.id === wanted.id) fail(403, 'Choose your own listing for the offer and another member’s listing to receive.');
+    if (Number(wanted.seller_id) === Number(user.id)) fail(403, 'You can’t make a trade offer on your own listing.');
+    if (Number(offered.seller_id) !== Number(user.id) || Number(offered.id) === Number(wanted.id)) fail(403, 'Choose one of your listings to offer for another member’s listing.');
     const note = typeof body.note === 'string' ? body.note.trim().slice(0, 500) : '';
     const now = nowIso(); const result = await db.prepare(`INSERT INTO trade_offers(listing_id,offered_listing_id,sender_id,receiver_id,note,created_at,updated_at)
       VALUES(?,?,?,?,?,?,?)`).run(wanted.id,offered.id,user.id,wanted.seller_id,note,now,now);
@@ -511,21 +565,24 @@ async function handler(req,res) {
     const url = new URL(req.url,'http://localhost');
     if (url.pathname.startsWith('/api/')) return await transactionContext.run({connection:undefined},()=>api(req,res,url));
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res,405,{error:'Method not allowed.'});
-    if (url.pathname === '/auth' || url.pathname === '/admin') {
+    if (url.pathname === '/admin' || url.pathname === '/admin/') {
+      res.writeHead(302,{ Location:`${ADMIN_ORIGIN}/${url.search}`, 'Cache-Control':'no-store' });
+      return res.end();
+    }
+    if (url.pathname === '/auth') {
       res.writeHead(301,{ Location:`${url.pathname}/${url.search}`, 'Cache-Control':'no-store' });
       return res.end();
     }
     const publicFiles = new Map([
-      ['/','index.html'],['/index.html','index.html'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/js/theme.js','assets/js/theme.js'],['/marketplace.html','marketplace.html'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
-      ['/auth/','auth/index.html'],['/auth/index.html','auth/index.html'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js'],
-      ['/admin/','admin/live.html'],['/admin/index.html','admin/live.html'],['/admin/admin.css','admin/live.css'],['/admin/admin.js','admin/live.js']
+      ['/','index.html'],['/index.html','index.html'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/css/design-refresh.css','assets/css/design-refresh.css'],['/assets/js/theme.js','assets/js/theme.js'],['/assets/js/landing.js','assets/js/landing.js'],['/marketplace.html','marketplace.html'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
+      ['/auth/','auth/index.html'],['/auth/index.html','auth/index.html'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js']
     ]);
     const asset = publicFiles.get(decodeURIComponent(url.pathname));
     if (!asset) return send(res,404,{error:'Not found.'});
     const filePath = path.join(ROOT,asset);
     let stat; try { stat = fs.statSync(filePath); } catch { return send(res,404,{error:'Not found.'}); }
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200,{ 'Content-Type':mime[ext]||'application/octet-stream', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'same-origin', 'X-Frame-Options':'DENY', 'Content-Security-Policy':"default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'" });
+    res.writeHead(200,{ 'Content-Type':mime[ext]||'application/octet-stream', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'same-origin', 'X-Frame-Options':'DENY', 'Content-Security-Policy':"default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-ancestors 'none'" });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
@@ -535,4 +592,23 @@ async function handler(req,res) {
   }
 }
 
-initializeDatabase().then(()=>http.createServer(handler).listen(PORT,'127.0.0.1',()=>console.log(`YouFind connected to MySQL and listening at ${APP_URL}`))).catch(async error=>{console.error(error.message);await pool.end();process.exitCode=1;});
+async function adminHandler(req,res){
+  try{
+    if(req.method!=='GET'&&req.method!=='HEAD')return send(res,405,{error:'Method not allowed.'});
+    const route=new URL(req.url,'http://localhost').pathname;
+    const files=new Map([['/','live.html'],['/index.html','live.html'],['/admin.css','live.css'],['/admin.js','live.js'],['/assets/css/styles.css',path.join(ROOT,'assets/css/styles.css')],['/assets/css/theme.css',path.join(ROOT,'assets/css/theme.css')],['/assets/css/design-refresh.css',path.join(ROOT,'assets/css/design-refresh.css')],['/assets/js/theme.js',path.join(ROOT,'assets/js/theme.js')]]);
+    const asset=files.get(decodeURIComponent(route));
+    if(!asset)return send(res,404,{error:'Not found.'});
+    const filePath=path.isAbsolute(asset)?asset:path.join(ADMIN_ROOT,asset);
+    const stat=fs.statSync(filePath);if(!stat.isFile())return send(res,404,{error:'Not found.'});
+    const ext=path.extname(filePath).toLowerCase();
+    res.writeHead(200,{'Content-Type':mime[ext]||'application/octet-stream','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Content-Security-Policy':`default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${APP_URL}; frame-ancestors 'none'`});
+    if(req.method==='HEAD')return res.end();
+    fs.createReadStream(filePath).pipe(res);
+  }catch(error){if(!res.headersSent)send(res,500,{error:'Admin page could not be opened.'});else res.destroy();}
+}
+
+initializeDatabase().then(()=>{
+  http.createServer(handler).listen(PORT,'127.0.0.1',()=>console.log(`YouFind API and marketplace listening at ${APP_URL}`));
+  http.createServer(adminHandler).listen(ADMIN_PORT,'127.0.0.1',()=>console.log(`YouFind admin panel listening at ${ADMIN_ORIGIN}`));
+}).catch(async error=>{console.error(error.message);await pool.end();process.exitCode=1;});

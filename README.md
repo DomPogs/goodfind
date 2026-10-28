@@ -22,6 +22,7 @@ The sign-in and sign-up forms use a dedicated page and create real accounts. Eve
 ## Included
 
 - Email and password accounts. Passwords use Node's built-in scrypt hash; sessions use random, HTTP-only cookies.
+- New accounts submit a school ID photo for administrator review. The private photo is deleted after approval or rejection; rejected members can submit a replacement from profile settings.
 - MySQL/MariaDB-backed member listings, trade offers, messages, and orders.
 - The database schema in `database/schema.sql` follows the provided ERD: Users, Categories, Listings, Orders, and Reviews, including its one-to-many and one-review-per-order relationships.
 - Trade offers can be accepted, declined, or withdrawn. Accepted trades mark both listings as traded.

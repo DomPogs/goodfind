@@ -1,0 +1,210 @@
+/* Goodfind visual system: shared surfaces, controls, and responsive spacing. */
+:root{
+  --ink:#1b2921;--muted:#718078;--line:#e4ebe5;--paper:#fff;--canvas:#f5f7f4;
+  --green:#286847;--green-dark:#1f5439;--green2:#eaf3ec;--lime:#d5e9a4;
+  --shadow:0 16px 42px #203a2a0b;--radius:18px;
+  color-scheme:light
+}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{background:radial-gradient(ellipse at 8% 3%,#edf4ed 0,transparent 34rem),var(--canvas);color:var(--ink);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit}
+button,a,input,select,textarea{ -webkit-tap-highlight-color:transparent }
+:focus-visible{outline:3px solid #72a98480;outline-offset:3px}
+.shell{max-width:1360px;padding-inline:clamp(16px,3.1vw,36px)}
+.topbar,.authbar,.admin-topbar{backdrop-filter:blur(16px);box-shadow:0 5px 24px #1d382509}
+.topbar{height:72px}
+.nav{gap:clamp(18px,3vw,38px)}
+.logo{font-size:22px;letter-spacing:-1.1px;color:var(--ink)}
+.logo-mark,.brand-mark{background:linear-gradient(145deg,#347653,#205a3c);box-shadow:0 5px 12px #28684724}
+.navlinks{gap:8px;font-size:13px}
+.navlinks a{padding:10px 12px;border-radius:10px;transition:background .18s,color .18s}
+.navlinks a.active,.navlinks a:hover{background:var(--green2);color:var(--green)}
+.navright{gap:10px}
+.iconbtn{width:38px;height:38px;border-radius:11px;transition:background .18s,color .18s,transform .18s}
+.iconbtn:hover{background:var(--green2);color:var(--green);transform:translateY(-1px)}
+.avatar{box-shadow:0 0 0 2px var(--paper),0 0 0 3px var(--line)}
+.sellbtn,.primary,.authnav-primary,.landing-button:not(.outline):not(.light){background:linear-gradient(135deg,#347653,#245c3f);box-shadow:0 7px 16px #245c3f22;transition:transform .18s,box-shadow .18s,filter .18s}
+.sellbtn:hover,.primary:hover,.authnav-primary:hover,.landing-button:not(.outline):not(.light):hover{filter:brightness(1.04);box-shadow:0 10px 22px #245c3f2c;transform:translateY(-1px)}
+.authnav,.adminnav,.filterbtn,.map-toggle,.map-control,.date-chip{border-radius:10px;transition:border-color .16s,background .16s,color .16s,transform .16s}
+.authnav{padding:9px 13px}
+.adminnav{border-color:#dce9de;background:#f0f6f0}
+.hero{padding:53px 0 24px}
+.hero h1{font-size:clamp(36px,4.2vw,54px);letter-spacing:-2.3px}
+.hero p{max-width:590px;font-size:15px;line-height:1.7}
+.searchrow{gap:10px;margin:12px 0 22px}
+.searchbox{height:52px;border-radius:14px;padding-inline:17px;box-shadow:0 5px 18px #263c2c08}
+.searchbox:focus-within{border-color:#8eae96;box-shadow:0 0 0 4px #4f875a12,0 5px 18px #263c2c08}
+.searchbox input{font-size:14px}
+.filterbtn{height:52px;padding-inline:17px;background:var(--paper)}
+.filterbtn:hover,.map-toggle:hover,.map-control:hover{border-color:#9db8a2;color:var(--green);background:var(--green2)}
+#filterpanel{border-radius:14px!important;box-shadow:var(--shadow)}
+.tabs{gap:7px;padding-bottom:18px}
+.tab{padding:9px 14px;border:1px solid transparent;transition:background .16s,border-color .16s,color .16s}
+.tab.active{background:var(--ink);color:#fff}
+.tab:hover:not(.active){background:var(--paper);border-color:var(--line);color:var(--ink)}
+.section-head{margin-bottom:16px}
+.section-head h2{font-size:21px;letter-spacing:-.55px}
+.section-head p{font-size:12px}
+.listing-tools{display:flex;align-items:center;gap:10px}
+.sortcontrol select{min-height:39px;border-radius:10px;padding:8px 12px}
+.grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding-bottom:48px}
+.card{border:1px solid #e6ece6;border-radius:18px;box-shadow:0 4px 16px #203a2a08;transition:transform .2s,border-color .2s,box-shadow .2s}
+.card:hover{transform:translateY(-4px);border-color:#d6e2d7;box-shadow:0 17px 38px #203a2a12}
+.art{height:205px}
+.badge{border:1px solid #ffffff9c;border-radius:8px;padding:6px 9px;box-shadow:0 3px 10px #1e342512}
+.heart{box-shadow:0 3px 10px #1e342512;transition:transform .16s,color .16s}
+.heart:hover{transform:scale(1.08)}
+.cardbody{padding:14px 15px 15px}
+.sellerline{font-size:11px}
+.card h3{margin-top:9px;font-size:15px;letter-spacing:-.2px}
+.sub{line-height:1.55}
+.card-detail-row{margin-top:12px}
+.condition-tag,.tradeTag{border:1px solid #e1ebe2;border-radius:7px;background:#f1f6f1;color:#436c4d}
+.cardfoot{margin-top:13px;padding-top:12px;border-color:#edf1ed}
+.price{font-size:19px;color:var(--ink)}
+.card-actions{gap:8px}
+.card-actions .card-action,.card-actions .card-trade-action{min-height:37px;border-radius:10px;font-size:11px}
+.card-actions .card-trade-action{background:var(--paper)}
+.empty{border:1px dashed var(--line);border-radius:16px;background:var(--paper)}
+.trust{border-radius:16px;background:linear-gradient(110deg,#edf4ed,#f6f8f3);box-shadow:0 5px 18px #203a2a06}
+.overlay{background:#15271e72;backdrop-filter:blur(5px)}
+.modal{border:1px solid #ffffffb0;border-radius:22px;box-shadow:0 28px 90px #081a1060}
+.modalhead h2{letter-spacing:-.8px}
+.close{transition:background .16s,transform .16s}
+.close:hover{background:#e9efea;transform:rotate(4deg)}
+.field input,.field select,.field textarea{min-height:44px;border-radius:11px;border-color:#dfe7e0;transition:border-color .16s,box-shadow .16s,background .16s}
+.field textarea{min-height:100px}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#78a482;box-shadow:0 0 0 4px #2d714313}
+.modal .primary{min-height:45px;border-radius:11px}
+.detail-modal-head{padding-bottom:16px;border-bottom:1px solid var(--line)}
+.detail-layout{gap:23px}
+.detail-visual{border-radius:18px}
+.detail-fact,.detail-owner-note,.detail-description,.detail-seller{border-radius:13px}
+.chat-modal{border:1px solid #e3eae4}
+.messages-fab{background:linear-gradient(145deg,#347653,#20593d);box-shadow:0 12px 30px #183e2b42}
+.messages-fab:hover{box-shadow:0 16px 36px #183e2b50;transform:translateY(-3px) scale(1.02)}
+.map-view{border-radius:18px;box-shadow:var(--shadow)}
+.map-toolbar{padding:17px 19px}
+.toast{border:1px solid #ffffff20;box-shadow:0 12px 34px #0a1b1050}
+
+/* Landing page */
+.landing-shell{width:min(1190px,calc(100% - 56px))}
+.landing-header{height:76px}
+.landing-brand{font-size:22px}
+.landing-nav{gap:8px;font-size:13px}
+.landing-nav a{padding:10px 12px;border-radius:10px;transition:background .16s,color .16s}
+.landing-nav a:hover{background:var(--green2)}
+.landing-actions{gap:14px}
+.landing-signin{padding:9px 6px}
+.landing-button{min-height:46px;border-radius:11px}
+.landing-button.outline{border-color:#cbdacc;background:#ffffff70}
+.landing-hero{min-height:500px;margin-top:10px;border:1px solid #e4ece2;border-radius:27px;box-shadow:0 18px 45px #203a2a0a}
+.hero-copy h1{letter-spacing:-3px}
+.hero-art{transform:scale(.96)}
+.landing-strip{padding-block:21px 25px;letter-spacing:.45px}
+.landing-section{padding-block:66px 70px}
+.step-card{border-radius:16px;box-shadow:0 4px 16px #203a2a05}
+.step-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px #203a2a0d}
+.landing-feature{border:1px solid #e6ede5;border-radius:22px;background:linear-gradient(120deg,#eef4ed,#f5f7f3)}
+.landing-cta{border-radius:19px;box-shadow:0 13px 32px #245c3f1b}
+.landing-footer{color:var(--muted)}
+
+/* Sign-in and sign-up */
+.authmain{padding:32px 20px}
+.authlayout{width:min(1050px,100%);min-height:570px;border-radius:24px;box-shadow:0 24px 72px #1b392711}
+.authstory{padding:clamp(35px,5vw,54px)}
+.authformside{padding:clamp(30px,5vw,54px)}
+.authformside h2{letter-spacing:-.9px}
+.authswitch{border:1px solid var(--line);border-radius:12px}
+.authswitch button{min-height:40px}
+.authformside .field{margin:12px 0}
+.authformside .primary{min-height:46px;border-radius:11px}
+
+/* Admin sign-in and dashboard */
+.admin-page{background:radial-gradient(ellipse at 12% 0,#edf4ed 0,transparent 35rem),var(--canvas)}
+.admin-topbar{height:68px;padding-inline:max(20px,calc((100vw - 1200px)/2))}
+.admin-main{padding-top:clamp(30px,5vw,58px)}
+.admin-login{border-radius:21px;padding:clamp(25px,4vw,38px);box-shadow:0 22px 70px #1b392711}
+.admin-heading{margin-bottom:23px}
+.admin-heading h1{letter-spacing:-.9px}
+.metric-grid{gap:14px}
+.metric-card,.admin-panel{border-radius:15px;border-color:#e5ebe5;box-shadow:0 5px 19px #203a2a07}
+.metric-card{padding:18px}
+.admin-panel{padding:19px}
+.panel-heading h2{letter-spacing:-.25px}
+.table-wrap{border:1px solid #edf1ed;border-radius:11px}
+table{min-width:650px}
+thead th{background:#f7f9f7}
+.verification-card{border-radius:13px;background:#fafcf9}
+
+@media(max-width:1100px){
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .nav{gap:14px}.navlinks{gap:3px}.navlinks a{padding-inline:9px}
+}
+@media(max-width:760px){
+  .topbar{height:64px}.shell{padding-inline:17px}.nav{gap:0}.navright{gap:5px}
+  .hero{padding-top:37px}.hero h1{font-size:39px;letter-spacing:-1.8px}
+  .searchrow{gap:7px}.searchbox,.filterbtn{height:47px}.filterbtn{padding-inline:12px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .art{height:160px}.cardbody{padding:11px}.card h3{font-size:13px}
+  .landing-shell{width:calc(100% - 36px)}.landing-header{height:68px}.landing-actions{gap:9px}
+  .landing-hero{margin-top:4px;border-radius:22px}.landing-section{padding-block:48px}
+  .authmain{padding:22px 14px}.authlayout{border-radius:20px}
+  .admin-main{padding:24px 15px}.metric-grid{gap:9px}.admin-panel{padding:15px}
+}
+@media(max-width:430px){
+  .shell{padding-inline:12px}.grid{gap:9px}.art{height:137px}.cardbody{padding:9px}
+  .card h3{font-size:12px}.card-actions{gap:5px}.card-actions .card-action,.card-actions .card-trade-action{font-size:9px}
+  .landing-shell{width:calc(100% - 28px)}.landing-header>.landing-actions>.landing-button{font-size:10px}
+  .landing-hero{padding-inline:20px}.hero-copy h1{font-size:42px}
+  .listing-tools{gap:5px}.sortcontrol{font-size:10px}.sortcontrol select{max-width:150px}
+}
+
+/* Dark mode uses the requested blue-gray palette across every surface. */
+html[data-theme="dark"]{
+  color-scheme:dark;--ink:#e3edf2;--muted:#a7bac5;--line:#31434e;--paper:#192630;--canvas:#101920;
+  --green:#95bccc;--green-dark:#2b4c59;--green2:#203743;--shadow:0 18px 45px #0006
+}
+html[data-theme="dark"] body,html[data-theme="dark"] .admin-page{background:radial-gradient(ellipse at 10% 0,#1a303b 0,transparent 34rem),var(--canvas)!important;color:var(--ink)}
+html[data-theme="dark"] .topbar,html[data-theme="dark"] .authbar,html[data-theme="dark"] .admin-topbar{background:#151f27ed!important;border-color:var(--line)!important;box-shadow:0 5px 24px #0003}
+html[data-theme="dark"] .logo,html[data-theme="dark"] .card h3,html[data-theme="dark"] .price,html[data-theme="dark"] .section-head h2,html[data-theme="dark"] .admin-heading h1{color:var(--ink)}
+html[data-theme="dark"] .logo-mark,html[data-theme="dark"] .brand-mark{background:linear-gradient(145deg,#376778,#2b4c59);color:#fff}
+html[data-theme="dark"] .navlinks a.active,html[data-theme="dark"] .navlinks a:hover,html[data-theme="dark"] .iconbtn:hover{background:#203743;color:#b9d5df}
+html[data-theme="dark"] .sellbtn,html[data-theme="dark"] .primary,html[data-theme="dark"] .authnav-primary,html[data-theme="dark"] .map-control-primary,html[data-theme="dark"] .landing-button:not(.outline):not(.light){background:linear-gradient(135deg,#376778,#2b4c59)!important;border-color:#2b4c59!important;color:#f2f8fa!important;box-shadow:0 7px 18px #07121966}
+html[data-theme="dark"] .sellbtn:hover,html[data-theme="dark"] .primary:hover,html[data-theme="dark"] .landing-button:not(.outline):not(.light):hover{background:#345d6b!important}
+html[data-theme="dark"] .authnav:not(.authnav-primary),html[data-theme="dark"] .adminnav,html[data-theme="dark"] .filterbtn,html[data-theme="dark"] .map-toggle,html[data-theme="dark"] .map-control,html[data-theme="dark"] .sortcontrol select,html[data-theme="dark"] .date-chip{background:#192630!important;color:var(--ink)!important;border-color:var(--line)!important}
+html[data-theme="dark"] .adminnav,html[data-theme="dark"] .condition-tag,html[data-theme="dark"] .tradeTag{background:#203743!important;color:#b8d5df!important;border-color:#3d5c69!important}
+html[data-theme="dark"] .hero h1 span,html[data-theme="dark"] .price,html[data-theme="dark"] .eyebrow,html[data-theme="dark"] .landing-signin{color:#a7cedb}
+html[data-theme="dark"] .searchbox,html[data-theme="dark"] #filterpanel,html[data-theme="dark"] .card,html[data-theme="dark"] .empty,html[data-theme="dark"] .modal,html[data-theme="dark"] .authlayout,html[data-theme="dark"] .authformside,html[data-theme="dark"] .step-card,html[data-theme="dark"] .metric-card,html[data-theme="dark"] .admin-panel,html[data-theme="dark"] .admin-login{background:var(--paper)!important;border-color:var(--line)!important;color:var(--ink)}
+html[data-theme="dark"] .cardbody{background:linear-gradient(180deg,#192630,#1a2933)!important;color:var(--ink)}
+html[data-theme="dark"] .searchbox:focus-within{border-color:#6f9aaa;box-shadow:0 0 0 4px #95bccc20}
+html[data-theme="dark"] .tab{color:#b8c9d1}
+html[data-theme="dark"] .tab.active{background:linear-gradient(135deg,#376778,#2b4c59)!important;color:#f4f8fa!important}
+html[data-theme="dark"] .tab:hover:not(.active),html[data-theme="dark"] .close{background:#20313a!important;color:var(--ink)}
+html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] .tradeoffer select{background:#121d25!important;color:var(--ink)!important;border-color:var(--line)!important}
+html[data-theme="dark"] .field label,html[data-theme="dark"] .detail-heading-copy h2,html[data-theme="dark"] .detail-seller-copy strong{color:var(--ink)}
+html[data-theme="dark"] .field input:focus,html[data-theme="dark"] .field select:focus,html[data-theme="dark"] .field textarea:focus{border-color:#81afbf!important;box-shadow:0 0 0 4px #95bccc20!important}
+html[data-theme="dark"] .trust,html[data-theme="dark"] .landing-feature,html[data-theme="dark"] .profile-summary,html[data-theme="dark"] .profile-photo-editor,html[data-theme="dark"] .detail-owner-note,html[data-theme="dark"] .sell-steps,html[data-theme="dark"] .sell-section,html[data-theme="dark"] .sell-form-footer{background:#192a34!important;border-color:var(--line)!important;color:var(--ink)}
+html[data-theme="dark"] .landing-hero{background:linear-gradient(118deg,#1a2c36,#223844)!important;border-color:#344b56}
+html[data-theme="dark"] .art-card{background:#1a2b35e8;border-color:#ffffff20;color:var(--ink)}
+html[data-theme="dark"] .art-product{background:linear-gradient(155deg,#203b47,#192b35)}
+html[data-theme="dark"] .step-icon,html[data-theme="dark"] .sell-head-icon,html[data-theme="dark"] .sell-section-number,html[data-theme="dark"] .sell-choice-icon,html[data-theme="dark"] .sell-trade-icon{background:#203743;color:#a7cedb}
+html[data-theme="dark"] .landing-cta{background:linear-gradient(120deg,#2b4c59,#223d49)!important}
+html[data-theme="dark"] .landing-button.light{background:#dceaf0!important;color:#2b4c59!important}
+html[data-theme="dark"] .landing-button.outline{background:#172630;color:#b9d5df;border-color:#486575}
+html[data-theme="dark"] .authstory{background:linear-gradient(145deg,#1a303a,#263c47)!important}
+html[data-theme="dark"] .authstory h1 span{color:#c2dce5}
+html[data-theme="dark"] .authswitch,html[data-theme="dark"] .authnotice,html[data-theme="dark"] .admin-message{background:#14212a;border-color:var(--line);color:#c4d8e0}
+html[data-theme="dark"] .authswitch button.active{background:#2b4c59;color:#f0f7fa}
+html[data-theme="dark"] .table-wrap{border-color:var(--line)}
+html[data-theme="dark"] thead th{background:#172630;color:#a7bac5}
+html[data-theme="dark"] td{border-color:#263944;color:#b6c6ce}
+html[data-theme="dark"] .verification-card{background:#172630;border-color:var(--line)}
+html[data-theme="dark"] .verification-photo-wrap{background:#101920}
+html[data-theme="dark"] .messages-fab{background:linear-gradient(145deg,#376778,#2b4c59)!important}
+html[data-theme="dark"] .messages-fab::before{background:#192630;border-color:var(--line);color:var(--ink)}
+html[data-theme="dark"] .map-view{background:#192630;border-color:var(--line)}
+html[data-theme="dark"] .photo-upload,html[data-theme="dark"] .photo-preview,html[data-theme="dark"] .photo-preview-image{background:#172630;border-color:var(--line)}
+html[data-theme="dark"] .toast{background:#203743;color:#e3edf2}
+@media(max-width:620px){html[data-theme="dark"] body{background:radial-gradient(ellipse at 10% 0,#1a303b 0,transparent 34rem),var(--canvas)!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}

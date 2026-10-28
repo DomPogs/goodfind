@@ -262,4 +262,16 @@ html[data-theme="dark"] button:not(.danger):not(.delete-btn):not(.photo-thumb-re
 html[data-theme="dark"] button:not(.primary):not(.sellbtn):not(.authnav-primary):not(.landing-button):not(.map-control-primary):not(.card-action):not(.danger):not(.delete-btn):not(.photo-thumb-remove){background-color:#203743}
 html[data-theme="dark"] button:not(.danger):not(.delete-btn):not(.photo-thumb-remove):hover{border-color:#5a8193;color:#dce9ef}
 html[data-theme="dark"] a.adminnav,html[data-theme="dark"] a.adminnav:hover{background:#203743!important;border-color:#3e5f6e!important;color:#a6cbd9!important}
+html[data-theme="dark"] .verification-card{background:#17242d;border-color:#31434e}
+html[data-theme="dark"] .verification-info{color:#b7cbd5}
+html[data-theme="dark"] .verification-info strong{color:#dce9ef}
+html[data-theme="dark"] .verification-photo-wrap{background:#203743}
+html[data-theme="dark"] .verification-count{background:#203743;color:#a6cbd9}
+html[data-theme="dark"] .verification-empty{border-color:#31434e;color:#a7bdc9}
+html[data-theme="dark"] .id-verification-status{background:#1a2b34;border-color:#31434e;color:#a6cbd9}
+html[data-theme="dark"] .id-verification-status small{color:#a7bdc9}
+html[data-theme="dark"] .id-verification-status.verified{background:#1d332d;border-color:#345449;color:#a9d7c0}
+html[data-theme="dark"] .id-verification-status.rejected{background:#382522;border-color:#5b3a35;color:#ffc0b0}
+html[data-theme="dark"] .id-photo-pick{background:#203743;border-color:#486775;color:#a6cbd9}
+html[data-theme="dark"] .id-photo-preview{background:#17242d;border-color:#31434e}
 html[data-theme="dark"] .authform a,html[data-theme="dark"] .detail-description a,html[data-theme="dark"] .profile-link{color:#95bccc!important}

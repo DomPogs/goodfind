@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
   full_name VARCHAR(120) NOT NULL,
   contact_no VARCHAR(25) NOT NULL DEFAULT '',
   profile_photo MEDIUMTEXT NULL,
+  id_photo_data MEDIUMTEXT NULL,
+  id_verification_status ENUM('unsubmitted','pending','verified','rejected') NOT NULL DEFAULT 'unsubmitted',
+  id_photo_data MEDIUMTEXT NULL,
+  id_verification_status ENUM('unsubmitted','pending','verified','rejected') NOT NULL DEFAULT 'unsubmitted',
   email VARCHAR(254) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',
@@ -18,7 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
   stripe_payouts_enabled TINYINT(1) NOT NULL DEFAULT 0,
   created_at VARCHAR(32) NOT NULL,
   PRIMARY KEY (id), UNIQUE KEY uq_users_email (email),
-  UNIQUE KEY uq_users_school_id (school_id)
+  UNIQUE KEY uq_users_school_id (school_id), KEY idx_users_id_verification_status (id_verification_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS categories (

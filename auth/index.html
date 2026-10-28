@@ -6,8 +6,9 @@
 <meta name="theme-color" content="#f7f7f3">
 <title>Sign in or sign up — YouFind</title>
 <link rel="stylesheet" href="../assets/css/styles.css?v=multi-photo-3">
-<link rel="stylesheet" href="auth.css?v=ui-refresh-1">
+<link rel="stylesheet" href="auth.css?v=id-upload-1">
 <link rel="stylesheet" href="../assets/css/theme.css?v=dark-9">
+<link rel="stylesheet" href="../assets/css/design-refresh.css?v=design-1">
 <script src="../assets/js/theme.js?v=dark-4"></script>
 </head>
 <body>
@@ -19,18 +20,24 @@
       <div class="authswitch" role="tablist" aria-label="Account action"><button class="active" id="loginTab" type="button" role="tab" aria-selected="true">Sign in</button><button id="signupTab" type="button" role="tab" aria-selected="false">Sign up</button></div>
       <h2 id="formTitle">Welcome back</h2><p class="authintro" id="formIntro">Sign in to find items and manage your listings.</p>
       <form id="authForm" autocomplete="on">
-        <div class="field" id="nameField" hidden><label for="displayName">Full name</label><input id="displayName" name="displayName" autocomplete="name" placeholder="Your full name"></div>
-        <div class="field" id="schoolField" hidden><label for="schoolId">Official school ID</label><input id="schoolId" name="schoolId" autocomplete="off" placeholder="Your school ID number"></div>
+        <div class="field" id="nameField" hidden><label for="displayName">Full name</label><input id="displayName" name="displayName" autocomplete="name" placeholder="Your full name"><small class="id-photo-help" id="ocrNameHint" hidden></small></div>
+        <div class="field" id="schoolField" hidden><label for="schoolId">Official school ID number</label><input id="schoolId" name="schoolId" autocomplete="off" placeholder="Your school ID number"><small class="id-photo-help" id="ocrSchoolHint" hidden></small></div>
+        <div class="field" id="idPhotoField" hidden><label for="idPhoto">Photo of your school ID</label><label class="id-photo-pick" for="idPhoto">Choose a photo or take one</label><input class="id-photo-input" id="idPhoto" type="file" accept="image/*" capture="environment"><div class="id-photo-preview" id="idPhotoPreview" hidden></div><small class="id-photo-help">We’ll scan the photo to fill your name and ID number. Check both fields before continuing. Make sure the text is readable; the image is removed after admin review.</small></div>
         <div class="field" id="contactField" hidden><label for="contactNo">Contact number</label><input id="contactNo" name="contactNo" type="tel" autocomplete="tel" minlength="7" maxlength="25" placeholder="Your phone number"></div>
         <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="username" required placeholder="Your Email"></div>
-        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Enter your password"></div>
+        <div class="field"><label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Enter your password" aria-describedby="passwordRules"><button class="password-toggle" id="passwordToggle" type="button" aria-controls="password confirmPassword" aria-pressed="false">Show</button></div>
+          <ul class="password-rules" id="passwordRules" aria-live="polite" hidden><li data-rule="length">At least 12 characters</li><li data-rule="lower">One lowercase letter</li><li data-rule="upper">One uppercase letter</li><li data-rule="digit">One digit</li><li data-rule="special">One special character</li></ul>
+        </div>
+        <div class="field" id="confirmPasswordField" hidden><label for="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter your password"></div>
         <button class="primary" id="submitButton" type="submit">Sign in</button>
       </form>
       <div class="authnotice" id="authnotice" role="status" aria-live="polite"></div>
       <p class="authlegal">By continuing, you agree to use YouFind respectfully and keep trades clear and fair.</p>
+      <p class="authlegal"><a href="http://localhost:3001/">Administrator? Use the dedicated admin sign-in.</a></p>
     </div>
   </section>
 </main>
-<script src="auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
+<script src="auth.js?v=id-ocr-4" defer></script>
 </body>
 </html>

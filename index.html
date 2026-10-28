@@ -8,13 +8,14 @@
 <title>YouFind — Find good things nearby</title>
 <link rel="stylesheet" href="assets/css/landing.css?v=landing-4">
 <link rel="stylesheet" href="assets/css/theme.css?v=dark-9">
+<link rel="stylesheet" href="assets/css/design-refresh.css?v=design-1">
 <script src="assets/js/theme.js?v=dark-4"></script>
 </head>
 <body>
 <header class="landing-shell landing-header">
   <a class="landing-brand" href="./" aria-label="YouFind home"><span class="brand-mark" aria-hidden="true">↗</span>YouFind</a>
   <nav class="landing-nav" aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#local-finds">Made for local finds</a></nav>
-  <div class="landing-actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme"><span aria-hidden="true">&#9790;</span></button><a class="landing-admin-link" href="http://localhost:3000/admin/">Admin login</a><a class="landing-signin" href="auth/?mode=login">Sign in</a><a class="landing-button" href="marketplace.html#discover">Explore items <span aria-hidden="true">→</span></a></div>
+  <div class="landing-actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme"><span aria-hidden="true">&#9790;</span></button><a class="landing-signin" id="landingAccountLink" href="auth/?mode=login">Sign in</a><a class="landing-button" href="marketplace.html#discover">Explore items <span aria-hidden="true">→</span></a></div>
 </header>
 <main>
   <section class="landing-shell landing-hero" aria-labelledby="hero-title">
@@ -47,6 +48,7 @@
   </section>
   <section class="landing-shell landing-cta"><div><h2>Ready to find something good?</h2><p>Explore the marketplace or share something with the community.</p></div><a class="landing-button light" href="marketplace.html#discover">Explore YouFind <span aria-hidden="true">→</span></a></section>
 </main>
-<footer class="landing-shell landing-footer"><a class="footer-brand" href="./">↗ YouFind</a><span>Find good things. Pass good things on.</span><nav class="footer-links" aria-label="Footer"><a href="marketplace.html#discover">Marketplace</a><a href="auth/?mode=signup">Create account</a><a href="http://localhost:3000/admin/">Admin</a></nav></footer>
+<footer class="landing-shell landing-footer"><a class="footer-brand" href="./">↗ YouFind</a><span>Find good things. Pass good things on.</span><nav class="footer-links" aria-label="Footer"><a href="marketplace.html#discover">Marketplace</a><a href="auth/?mode=signup">Create account</a></nav></footer>
+<script src="assets/js/landing.js?v=session-1" defer></script>
 </body>
 </html>

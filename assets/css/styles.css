@@ -209,6 +209,15 @@ body{background:radial-gradient(ellipse at 12% 0%,#eef5ed 0,transparent 31rem),v
 .profile-edit-btn{height:36px;flex:0 0 auto;padding:0 12px;font-size:11px}
 .profile-photo-editor{display:flex;align-items:center;gap:15px;margin:2px 0 18px;padding:14px;border:1px solid #e8eee8;border-radius:14px;background:#f8faf7}
 .profile-avatar-large{width:76px;height:76px;font-size:19px}
+.id-verification-status{display:flex;flex-direction:column;gap:4px;margin:12px 0;padding:12px 14px;border:1px solid #dfe8df;border-radius:12px;background:#f6f9f5;color:#315a3d;font-size:12px}
+.id-verification-status small{color:#758279;font-size:10px;line-height:1.5}
+.id-verification-status.pending{background:#f4f7fa;border-color:#dfe6ec;color:#425d6c}
+.id-verification-status.rejected{background:#fff5f2;border-color:#f1ded8;color:#9e4d40}
+.id-verification-status.verified{background:#eef7ef;border-color:#d6e8d8;color:#28643f}
+.id-photo-pick{display:flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border:1px dashed #9db6a1;border-radius:10px;background:#f6faf5;color:#315d43;font-size:12px;font-weight:700;cursor:pointer}
+.id-photo-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%)}
+.id-photo-preview{margin-top:9px;padding:8px;border:1px solid #e1e9e0;border-radius:10px;background:#f7f9f6}
+.id-photo-preview img{display:block;width:100%;max-height:200px;object-fit:contain;border-radius:7px}
 .profile-photo-actions{display:flex;align-items:flex-start;flex-direction:column;gap:7px}
 .profile-upload{display:inline-flex;align-items:center;justify-content:center;min-height:35px;padding:0 13px;border-radius:9px;background:#eaf1eb;color:#315b3d;font-size:11px;font-weight:700;cursor:pointer}
 .profile-upload:hover{background:#dfeae0}

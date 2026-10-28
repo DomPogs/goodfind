@@ -36,6 +36,7 @@ function showModal(html) { $('#modal').classList.remove('chat-modal','detail-mod
 function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
 function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal','sell-modal'); }
 function setListings(rows) { listings.splice(0,listings.length,...rows); }
+function isOwnListing(item) { return Boolean(currentUser && item?.sellerId && Number(currentUser.id)===Number(item.sellerId)); }
 function messageReadKey(listingId,otherId) { return `goodfind-message-read:${currentUser?.id}:${listingId}:${otherId}`; }
 function updateMessagesBadge(conversations) {
   if (!currentUser) return;
@@ -102,7 +103,7 @@ function render() {
         <span class="condition-tag" title="${esc(item.condition)}">${esc(item.condition)}</span>
       </div>
       <div class="cardfoot"><span class="price">${price(item.price)}</span>${item.trade?'<span class="tradeTag"><span aria-hidden="true">&#8596;</span> Open to trade</span>':''}</div>
-      <div class="card-actions"><button class="primary card-action" onclick="openDetail(${Number(item.id)})">View item</button>${item.trade?`<button class="filterbtn card-trade-action" onclick="openTrade(${Number(item.id)})">Offer trade</button>`:''}</div>
+      <div class="card-actions"><button class="primary card-action" onclick="openDetail(${Number(item.id)})">View item</button>${item.trade&&!isOwnListing(item)?`<button class="filterbtn card-trade-action" onclick="openTrade(${Number(item.id)})">Offer trade</button>`:''}</div>
     </div>
   </article>`).join('') : '<div class="empty"><strong>No finds yet</strong>Try a different search or category.</div>';
   if (listingsMap && !$('#mapview').hidden) refreshMapMarkers();
@@ -196,20 +197,26 @@ function openAccount() {
 }
 function openSignup() { authPage('signup'); }
 function accountPanel() {
+  const idStatus=currentUser.idVerificationStatus||'unsubmitted';
+  const idStatusText={unsubmitted:'Not submitted',pending:'Waiting for admin review',verified:'School ID verified',rejected:'Photo rejected — upload a new one'}[idStatus]||'Not submitted';
   showModal(`<div class="modalhead"><div><div class="eyebrow">YOUR ACCOUNT</div><h2>Account settings</h2><p>Manage your profile and seller payouts.</p></div><button class="close" onclick="closeModal()">×</button></div>
     <div class="profile-summary"><div class="profile-avatar">${currentUser.profilePhoto?`<img src="${esc(currentUser.profilePhoto)}" alt="Profile photo">`:esc(currentUser.displayName.slice(0,2).toUpperCase())}</div><div class="profile-summary-copy"><strong>${esc(currentUser.displayName)}</strong><span>${esc(currentUser.email)}</span><small>${esc(currentUser.contactNo||'Add your contact number')} · ${esc(currentUser.schoolId||'Add your school ID')}</small></div><button class="filterbtn profile-edit-btn" onclick="editProfile()">Edit profile</button></div>
+    <div class="id-verification-status ${esc(idStatus)}"><strong>School ID: ${esc(idStatusText)}</strong><small>${idStatus==='verified'?'Your ID number was reviewed by an admin.':idStatus==='pending'?'Your photo will be deleted after review.':idStatus==='rejected'?'Edit your profile to submit another clear photo.':'Edit your profile to submit a photo for review.'}</small></div>
     <div class="tradeoffer"><div class="yougive">SELLER PAYOUTS</div><p style="font-size:13px;line-height:1.6;color:#657168">${currentUser.payoutsConnected?'Your Stripe payouts account is connected.':'Connect a Stripe account to receive sale payouts.'}</p>
     ${currentUser.payoutsConnected?'':`<div class="field"><label>Two-letter payout country code</label><input id="country" maxlength="2" pattern="[A-Za-z]{2}" placeholder="e.g. US"></div><button class="filterbtn" style="width:100%" onclick="startPayoutSetup()">Set up payouts with Stripe</button>`}</div>
     <div class="account-signout"><div class="account-signout-copy"><span class="signout-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></svg></span><span><strong>Sign out</strong><small>End your Goodfind session on this device.</small></span></div><button class="signout-btn" onclick="signOut()" aria-label="Sign out of Goodfind">Sign out<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 5h8v14h-8M4 12h12m-4-4 4 4-4 4"/></svg></button></div>`);
 }
 let profilePhotoDraft = null;
+let schoolIdPhotoDraft = null;
 function editProfile() {
   profilePhotoDraft = currentUser.profilePhoto || null;
+  schoolIdPhotoDraft = null;
   showModal(`<div class="modalhead"><div><div class="eyebrow">YOUR ACCOUNT</div><h2>Edit profile</h2><p>Update the information other members see.</p></div><button class="close" onclick="accountPanel()">×</button></div>
     <form id="profileform">
       <div class="profile-photo-editor"><div class="profile-avatar profile-avatar-large" id="profile-preview">${profilePhotoDraft?`<img src="${esc(profilePhotoDraft)}" alt="Profile photo preview">`:esc(currentUser.displayName.slice(0,2).toUpperCase())}</div><div class="profile-photo-actions"><label class="profile-upload" for="profilePhotoFile">Choose photo</label><input id="profilePhotoFile" type="file" accept="image/jpeg,image/png,image/webp" hidden><button type="button" class="profile-remove" id="removeProfilePhoto" ${profilePhotoDraft?'':'hidden'}>Remove photo</button><small>JPG, PNG, or WebP · up to 8 MB</small></div></div>
       <div class="field"><label for="profileName">Full name</label><input id="profileName" name="displayName" value="${esc(currentUser.displayName)}" maxlength="60" required autocomplete="name"></div>
       <div class="field"><label for="profileSchoolId">School ID</label><input id="profileSchoolId" name="schoolId" value="${esc(currentUser.schoolId)}" maxlength="40" required></div>
+      <div class="field"><label for="schoolIdPhotoFile">School ID verification photo</label><label class="id-photo-pick" for="schoolIdPhotoFile">Choose a photo or take one</label><input class="id-photo-input" id="schoolIdPhotoFile" type="file" accept="image/*" capture="environment"><div class="id-photo-preview" id="school-id-preview" hidden></div><small class="profile-help">${esc(currentUser.idVerificationStatus==='verified'?'A new photo is needed only if you change your ID number.':'Submit a clear photo showing your name and ID number. Images are deleted after admin review.')}</small></div>
       <div class="field"><label for="profileContact">Contact number</label><input id="profileContact" name="contactNo" value="${esc(currentUser.contactNo)}" maxlength="25" minlength="7" required autocomplete="tel"></div>
       <div class="field"><label>Email address</label><input value="${esc(currentUser.email)}" disabled><small class="profile-help">Email changes need a separate verification step.</small></div>
       <button class="primary" id="saveProfile" type="submit">Save changes</button><button class="profile-cancel" type="button" onclick="accountPanel()">Cancel</button>
@@ -220,10 +227,16 @@ function editProfile() {
     try { profilePhotoDraft=await compressPhoto(file); $('#profile-preview').innerHTML=`<img src="${esc(profilePhotoDraft)}" alt="Profile photo preview">`; $('#removeProfilePhoto').hidden=false; }
     catch(error){notify(error.message);}
   });
+  $('#schoolIdPhotoFile').addEventListener('change',async event=>{
+    const file=event.currentTarget.files[0];if(!file)return;
+    if(!file.type.startsWith('image/')){event.currentTarget.value='';notify('Choose an image of your school ID.');return;}
+    try{schoolIdPhotoDraft=await compressPhoto(file);$('#school-id-preview').innerHTML=`<img src="${esc(schoolIdPhotoDraft)}" alt="School ID photo preview">`;$('#school-id-preview').hidden=false;}
+    catch(error){schoolIdPhotoDraft=null;event.currentTarget.value='';notify(error.message);}
+  });
   $('#removeProfilePhoto').addEventListener('click',()=>{profilePhotoDraft=null;$('#profilePhotoFile').value='';$('#profile-preview').textContent=currentUser.displayName.slice(0,2).toUpperCase();$('#removeProfilePhoto').hidden=true;});
   $('#profileform').onsubmit=async event=>{
     event.preventDefault();const form=new FormData(event.currentTarget);const button=$('#saveProfile');button.disabled=true;button.textContent='Saving…';
-    try { const result=await patch('/api/auth/profile',{displayName:form.get('displayName'),schoolId:form.get('schoolId'),contactNo:form.get('contactNo'),profilePhoto:profilePhotoDraft});currentUser=result.user;updateNav();accountPanel();notify('Profile updated successfully.'); }
+    try { const result=await patch('/api/auth/profile',{displayName:form.get('displayName'),schoolId:form.get('schoolId'),contactNo:form.get('contactNo'),profilePhoto:profilePhotoDraft,idPhoto:schoolIdPhotoDraft});currentUser=result.user;updateNav();accountPanel();notify('Profile updated successfully.'); }
     catch(error){notify(error.message);button.disabled=false;button.textContent='Save changes';}
   };
 }
@@ -238,13 +251,7 @@ async function signOut() {
 
 async function openAdmin() {
   if (!currentUser || currentUser.role !== 'admin') { notify('Admin access is required.'); return; }
-  try {
-    const {counts, listings:rows} = await request('/api/admin/overview');
-    showModal(`<div class="modalhead"><div><div class="eyebrow">GOODFIND ADMIN</div><h2>Marketplace overview</h2><p>Review activity and moderate listings.</p></div><button class="close" onclick="closeModal()">×</button></div>
-      <div class="adminstats"><div><strong>${counts.members}</strong><span>Members</span></div><div><strong>${counts.activeListings}</strong><span>Active listings</span></div><div><strong>${counts.hiddenListings}</strong><span>Hidden listings</span></div><div><strong>${counts.orders}</strong><span>Orders</span></div></div>
-      <div class="adminlisthead"><strong>Listings</strong><span>Latest 100</span></div>
-      ${rows.length?rows.map(item=>`<div class="adminlisting"><div class="adminlistinginfo"><strong>${esc(item.title)}</strong><span>${esc(item.seller)} · ${price(item.price)} · ${esc(item.status)}</span></div><button class="filterbtn" onclick="moderateListing(${Number(item.id)},'${item.status==='active'?'hidden':'active'}')">${item.status==='active'?'Hide':'Restore'}</button></div>`).join(''):'<div class="empty" style="padding:30px 10px"><strong>No listings</strong>Listings will appear here.</div>'}`);
-  } catch(error) { notify(error.message); }
+  location.href='http://localhost:3001/';
 }
 async function moderateListing(id,status) {
   try {
@@ -370,7 +377,7 @@ async function openDetail(id) {
     try{const result=await request(`/api/listings/${Number(item.id)}`);item={...item,...result.listing};}catch{}
   }
   const photos=Array.isArray(item.photosData)&&item.photosData.length?item.photosData:(item.photoData?[item.photoData]:[]);
-  const ownListing = memberItem && currentUser && Number(currentUser.id)===Number(item.sellerId);
+  const ownListing = memberItem && isOwnListing(item);
   showModal(`<div class="detail-modal-head">
       <div class="detail-heading-copy"><div class="detail-type"><span>${esc(item.kind)}</span><span class="detail-type-dot" aria-hidden="true">&#183;</span><span>${esc(item.category)}</span></div><h2>${esc(item.title)}</h2></div>
       <button class="close" onclick="closeModal()" aria-label="Close item details">&#215;</button>
@@ -385,7 +392,7 @@ async function openDetail(id) {
       </div>
     </div>
     ${ownListing?'<div class="detail-owner-note"><strong>Your listing</strong><span>Buyer messages about this item are in your inbox.</span></div>':''}
-    <div class="detail-actions">${memberItem?(ownListing?'<button class="primary" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout is available for member listings">Member checkout unavailable</button>'}${item.trade?`<button class="filterbtn detail-trade-button" onclick="openTrade(${Number(item.id)})">&#8596; Make a trade offer</button>`:''}</div>`);
+    <div class="detail-actions">${memberItem?(ownListing?'<button class="primary" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout is available for member listings">Member checkout unavailable</button>'}${item.trade&&!ownListing?`<button class="filterbtn detail-trade-button" onclick="openTrade(${Number(item.id)})">&#8596; Make a trade offer</button>`:''}</div>`);
   $('#modal').classList.add('detail-modal');
   document.querySelectorAll('.detail-photo-thumb').forEach(button=>button.addEventListener('click',()=>{
     const index=Number(button.dataset.photoIndex);const image=$('#detailMainPhoto');if(!image||!photos[index])return;
@@ -402,7 +409,8 @@ async function startCheckout(listingId) {
 async function openTrade(listingId) {
   const target = [...extra,...listings].find(item=>Number(item.id)===Number(listingId)); if (!target) return;
   if (!currentUser) { closeModal(); openAccount(); notify('Sign in to make a trade offer.'); return; }
-  const ownListings = listings.filter(item=>item.sellerId===currentUser.id && item.trade && item.status==='active' && Number(item.id)!==Number(target.id));
+  if (isOwnListing(target)) { closeModal(); notify('You can’t make a trade offer on your own listing.'); return; }
+  const ownListings = listings.filter(item=>isOwnListing(item) && item.trade && item.status==='active' && Number(item.id)!==Number(target.id));
   if (!target.sellerId) { notify('Sample listings are view-only. Member listings can receive real offers.'); return; }
   showModal(`<div class="modalhead"><div><h2>Make a trade offer</h2><p>Offer an item you own for <strong>${esc(target.title)}</strong>.</p></div><button class="close" onclick="closeModal()">×</button></div>
     ${ownListings.length?`<div class="tradeoffer"><div class="yougive">YOU OFFER</div><select id="tradeitem">${ownListings.map(item=>`<option value="${item.id}">${esc(item.title)} · ${price(item.price)}</option>`).join('')}</select><div class="yougive" style="margin-top:15px">YOU RECEIVE</div><div class="itemname">${esc(target.title)} <span style="color:#79867c;font-weight:500">· ${price(target.price)}</span></div></div>
