@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS users (
   display_name TEXT NOT NULL,
   full_name TEXT NOT NULL,
   contact_no TEXT NOT NULL DEFAULT '',
+  profile_photo TEXT,
+  id_photo_data TEXT,
+  id_verification_status TEXT NOT NULL DEFAULT 'unsubmitted' CHECK(id_verification_status IN ('unsubmitted','pending','verified','rejected')),
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'buyer' CHECK(role IN ('buyer','seller','admin')),
@@ -45,12 +48,20 @@ CREATE TABLE IF NOT EXISTS listings (
   place TEXT NOT NULL,
   emoji TEXT NOT NULL,
   art TEXT NOT NULL,
+  photo_data TEXT,
   note TEXT NOT NULL,
   open_to_trade INTEGER NOT NULL DEFAULT 0,
   description TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
   item_status TEXT GENERATED ALWAYS AS (status) VIRTUAL,
   created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS listing_photos (
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  photo_order INTEGER NOT NULL,
+  photo_data TEXT NOT NULL,
+  PRIMARY KEY (listing_id,photo_order)
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -71,11 +82,12 @@ CREATE TABLE IF NOT EXISTS orders (
 
 CREATE TABLE IF NOT EXISTS reviews (
   review_id INTEGER PRIMARY KEY,
-  order_id INTEGER NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   reviewer_id INTEGER NOT NULL REFERENCES users(id),
   rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
   remarks TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  UNIQUE(order_id,reviewer_id)
 );
 
 CREATE TABLE IF NOT EXISTS trade_offers (
@@ -100,5 +112,8 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_listings_active ON listings(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_seller_queue ON orders(seller_id,queue_status,order_date);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer_queue ON orders(buyer_id,queue_status,order_date);
+CREATE INDEX IF NOT EXISTS idx_orders_listing_queue ON orders(listing_id,queue_status,order_date);
 CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(listing_id, sender_id, receiver_id, id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);

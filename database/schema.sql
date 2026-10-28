@@ -12,8 +12,6 @@ CREATE TABLE IF NOT EXISTS users (
   profile_photo MEDIUMTEXT NULL,
   id_photo_data MEDIUMTEXT NULL,
   id_verification_status ENUM('unsubmitted','pending','verified','rejected') NOT NULL DEFAULT 'unsubmitted',
-  id_photo_data MEDIUMTEXT NULL,
-  id_verification_status ENUM('unsubmitted','pending','verified','rejected') NOT NULL DEFAULT 'unsubmitted',
   email VARCHAR(254) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',
@@ -90,6 +88,9 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at VARCHAR(32) NOT NULL,
   paid_at VARCHAR(32) NULL,
   PRIMARY KEY (id), UNIQUE KEY uq_orders_stripe (stripe_session_id),
+  KEY idx_orders_seller_queue (seller_id,queue_status,order_date),
+  KEY idx_orders_buyer_queue (buyer_id,queue_status,order_date),
+  KEY idx_orders_listing_queue (listing_id,queue_status,order_date),
   CONSTRAINT fk_orders_listing FOREIGN KEY (listing_id) REFERENCES listings(id),
   CONSTRAINT fk_orders_buyer FOREIGN KEY (buyer_id) REFERENCES users(id),
   CONSTRAINT fk_orders_seller FOREIGN KEY (seller_id) REFERENCES users(id)
@@ -102,7 +103,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   rating TINYINT UNSIGNED NOT NULL,
   remarks VARCHAR(2000) NOT NULL DEFAULT '',
   created_at VARCHAR(32) NOT NULL,
-  PRIMARY KEY (review_id), UNIQUE KEY uq_reviews_order (order_id),
+  PRIMARY KEY (review_id), UNIQUE KEY uq_reviews_order_reviewer (order_id,reviewer_id),
   CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5),
   CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   CONSTRAINT fk_reviews_user FOREIGN KEY (reviewer_id) REFERENCES users(id)

@@ -32,9 +32,9 @@ function notify(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('show');
   clearTimeout(window._toast); window._toast = setTimeout(() => toast.classList.remove('show'), 2800);
 }
-function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal','sell-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
-function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
-function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal','sell-modal'); }
+function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal','sell-modal','orders-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
+function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal','sell-modal','orders-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
+function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal','sell-modal','orders-modal','detail-modal'); }
 function setListings(rows) { listings.splice(0,listings.length,...rows); }
 function isOwnListing(item) { return Boolean(currentUser && item?.sellerId && Number(currentUser.id)===Number(item.sellerId)); }
 function messageReadKey(listingId,otherId) { return `goodfind-message-read:${currentUser?.id}:${listingId}:${otherId}`; }
@@ -64,6 +64,7 @@ function updateNav() {
   $('#signinbtn').hidden = Boolean(currentUser);
   $('#signupbtn').hidden = Boolean(currentUser);
   avatar.hidden = !currentUser;
+  $('#ordersbtn').hidden = !currentUser || currentUser.role === 'admin';
   $('#adminbtn').hidden = currentUser?.role !== 'admin';
   $('#messages-fab').hidden = !currentUser;
   if (currentUser) {
@@ -196,15 +197,31 @@ function openAccount() {
   authPage('login');
 }
 function openSignup() { authPage('signup'); }
+function profileListingsMarkup(items) {
+  if(!items.length)return `<div class="profile-listings-empty"><span aria-hidden="true">＋</span><strong>No items listed yet</strong><small>Your recently listed items will appear here.</small><button type="button" class="filterbtn" onclick="closeModal();openSell()">List an item</button></div>`;
+  const statusLabels={active:'Available',reserved:'Reserved',sold:'Sold',hidden:'Hidden',traded:'Traded'};
+  return `<div class="profile-listings-grid">${items.map(item=>`<article class="profile-listing-card"><div class="profile-listing-thumb" style="background:${esc(item.art||'var(--canvas)')}">${item.photoData?`<img src="${esc(item.photoData)}" alt="">`:`<span>${esc(item.emoji||'◇')}</span>`}</div><div class="profile-listing-info"><strong title="${esc(item.title)}">${esc(item.title)}</strong><small>${esc(item.category)} · ${price(item.price)}</small><span class="order-state order-state-${esc(item.status)}">${esc(statusLabels[item.status]||item.status)}</span></div></article>`).join('')}</div>`;
+}
+async function loadProfileListings() {
+  const host=$('#profile-listings-content');if(!host)return;
+  try {
+    const {listings:items}=await request('/api/auth/listings');
+    if(host.isConnected)host.innerHTML=profileListingsMarkup(items);
+  } catch(error) {
+    if(host.isConnected)host.innerHTML=`<div class="profile-listings-empty"><small>${esc(error.message||'Your listings could not be loaded.')}</small></div>`;
+  }
+}
 function accountPanel() {
   const idStatus=currentUser.idVerificationStatus||'unsubmitted';
   const idStatusText={unsubmitted:'Not submitted',pending:'Waiting for admin review',verified:'School ID verified',rejected:'Photo rejected — upload a new one'}[idStatus]||'Not submitted';
   showModal(`<div class="modalhead"><div><div class="eyebrow">YOUR ACCOUNT</div><h2>Account settings</h2><p>Manage your profile and seller payouts.</p></div><button class="close" onclick="closeModal()">×</button></div>
     <div class="profile-summary"><div class="profile-avatar">${currentUser.profilePhoto?`<img src="${esc(currentUser.profilePhoto)}" alt="Profile photo">`:esc(currentUser.displayName.slice(0,2).toUpperCase())}</div><div class="profile-summary-copy"><strong>${esc(currentUser.displayName)}</strong><span>${esc(currentUser.email)}</span><small>${esc(currentUser.contactNo||'Add your contact number')} · ${esc(currentUser.schoolId||'Add your school ID')}</small></div><button class="filterbtn profile-edit-btn" onclick="editProfile()">Edit profile</button></div>
     <div class="id-verification-status ${esc(idStatus)}"><strong>School ID: ${esc(idStatusText)}</strong><small>${idStatus==='verified'?'Your ID number was reviewed by an admin.':idStatus==='pending'?'Your photo will be deleted after review.':idStatus==='rejected'?'Edit your profile to submit another clear photo.':'Edit your profile to submit a photo for review.'}</small></div>
+    <section class="profile-listings-section"><div class="profile-listings-heading"><div><strong>Your listings</strong><small>Your six most recent items</small></div><button type="button" class="filterbtn" onclick="openListingManager()">Manage all</button></div><div id="profile-listings-content" class="profile-listings-loading">Loading your items…</div></section>
     <div class="tradeoffer"><div class="yougive">SELLER PAYOUTS</div><p style="font-size:13px;line-height:1.6;color:#657168">${currentUser.payoutsConnected?'Your Stripe payouts account is connected.':'Connect a Stripe account to receive sale payouts.'}</p>
     ${currentUser.payoutsConnected?'':`<div class="field"><label>Two-letter payout country code</label><input id="country" maxlength="2" pattern="[A-Za-z]{2}" placeholder="e.g. US"></div><button class="filterbtn" style="width:100%" onclick="startPayoutSetup()">Set up payouts with Stripe</button>`}</div>
     <div class="account-signout"><div class="account-signout-copy"><span class="signout-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></svg></span><span><strong>Sign out</strong><small>End your Goodfind session on this device.</small></span></div><button class="signout-btn" onclick="signOut()" aria-label="Sign out of Goodfind">Sign out<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 5h8v14h-8M4 12h12m-4-4 4 4-4 4"/></svg></button></div>`);
+  loadProfileListings();
 }
 let profilePhotoDraft = null;
 let schoolIdPhotoDraft = null;
@@ -245,7 +262,7 @@ async function startPayoutSetup() {
   catch (error) { notify(error.message); }
 }
 async function signOut() {
-  try { await post('/api/auth/logout',{}); currentUser = null; updateNav(); closeModal(); notify('You’re signed out.'); }
+  try { await post('/api/auth/logout',{}); currentUser = null; selectedOrdersTab=null;latestOrdersData=null; updateNav(); closeModal(); notify('You’re signed out.'); }
   catch (error) { notify(error.message); }
 }
 
@@ -265,6 +282,7 @@ async function moderateListing(id,status) {
 
 function openSell() {
   if (!currentUser) { openAccount(); notify('Sign in to publish a listing.'); return; }
+  if (currentUser.role!=='admin'&&currentUser.idVerificationStatus!=='verified') { accountPanel(); notify('Verify your school ID before listing an item.'); return; }
   showModal(`<div class="sell-head">
     <div class="sell-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></div>
     <div class="sell-head-copy"><span class="sell-kicker">SELL ON YOUFIND</span><h2>Create a listing</h2><p>Add clear details and photos to help your item find a new home.</p></div>
@@ -391,8 +409,8 @@ async function openDetail(id) {
         <section class="detail-description"><h3>About this item</h3><p>${esc(item.description)}</p></section>
       </div>
     </div>
-    ${ownListing?'<div class="detail-owner-note"><strong>Your listing</strong><span>Buyer messages about this item are in your inbox.</span></div>':''}
-    <div class="detail-actions">${memberItem?(ownListing?'<button class="primary" onclick="openMessages()">View buyer messages</button>':'<button class="primary" onclick="startCheckout('+Number(item.id)+')">Buy this item</button><button class="filterbtn" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout is available for member listings">Member checkout unavailable</button>'}${item.trade&&!ownListing?`<button class="filterbtn detail-trade-button" onclick="openTrade(${Number(item.id)})">&#8596; Make a trade offer</button>`:''}</div>`);
+    ${ownListing?'<div class="detail-owner-note"><strong>Your listing</strong><span>Order requests and item status are managed from Orders.</span></div>':''}
+    <div class="detail-actions">${memberItem?(ownListing?'<button class="primary" onclick="openListingManager()">Manage orders and item status</button>':'<button class="primary" onclick="requestOrder('+Number(item.id)+')">Request this item</button><button class="filterbtn" onclick="openConversation('+Number(item.id)+')">Message seller</button>'):'<button class="primary" disabled title="Member checkout is available for member listings">Member checkout unavailable</button>'}${item.trade&&!ownListing?`<button class="filterbtn detail-trade-button" onclick="openTrade(${Number(item.id)})">&#8596; Make a trade offer</button>`:''}</div>`);
   $('#modal').classList.add('detail-modal');
   document.querySelectorAll('.detail-photo-thumb').forEach(button=>button.addEventListener('click',()=>{
     const index=Number(button.dataset.photoIndex);const image=$('#detailMainPhoto');if(!image||!photos[index])return;
@@ -400,15 +418,20 @@ async function openDetail(id) {
     document.querySelectorAll('.detail-photo-thumb').forEach(thumb=>thumb.classList.toggle('active',thumb===button));
   }));
 }
-async function startCheckout(listingId) {
-  if (!currentUser) { closeModal(); openAccount(); notify('Sign in before checkout.'); return; }
-  try { const result = await post('/api/payments/checkout',{listingId}); location.href=result.url; }
-  catch (error) { notify(error.message); }
+async function requestOrder(listingId) {
+  if (!currentUser) { closeModal(); openAccount(); notify('Sign in to request an item.'); return; }
+  if (currentUser.role!=='admin'&&currentUser.idVerificationStatus!=='verified') { accountPanel(); notify('Verify your school ID before requesting an item.'); return; }
+  try {
+    await post('/api/orders',{listingId:Number(listingId)});
+    notify('Your request was added to the seller’s order queue.');
+    await openOrders('buying');
+  } catch (error) { notify(error.message); }
 }
 
 async function openTrade(listingId) {
   const target = [...extra,...listings].find(item=>Number(item.id)===Number(listingId)); if (!target) return;
   if (!currentUser) { closeModal(); openAccount(); notify('Sign in to make a trade offer.'); return; }
+  if (currentUser.role!=='admin'&&currentUser.idVerificationStatus!=='verified') { accountPanel(); notify('Verify your school ID before making a trade offer.'); return; }
   if (isOwnListing(target)) { closeModal(); notify('You can’t make a trade offer on your own listing.'); return; }
   const ownListings = listings.filter(item=>isOwnListing(item) && item.trade && item.status==='active' && Number(item.id)!==Number(target.id));
   if (!target.sellerId) { notify('Sample listings are view-only. Member listings can receive real offers.'); return; }
@@ -422,6 +445,112 @@ async function sendOffer(targetId) {
     closeModal(); notify('Trade offer sent.');
   } catch (error) { notify(error.message); }
 }
+function orderDate(value) {
+  const date=new Date(value);
+  return Number.isNaN(date.getTime())?String(value||''):date.toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'});
+}
+let selectedOrdersTab=null;
+let latestOrdersData=null;
+function orderStateLabel(order) {
+  if(order.queueStatus==='queued')return order.myRole==='seller'?(order.queuePosition===1?'Needs your review':'In the queue'):'Waiting for seller';
+  return ({approved:'Approved',completed:'Exchange complete',cancelled:'Closed'})[order.queueStatus]||order.queueStatus;
+}
+function orderProgressMarkup(order) {
+  if(order.queueStatus==='cancelled')return '';
+  const step=order.queueStatus==='queued'?1:order.queueStatus==='approved'?2:3;
+  return `<div class="order-progress" aria-label="Step ${step} of 3: ${esc(orderStateLabel(order))}"><span class="${step>=1?'reached':''} ${step>=2?'connected':''}"><i>1</i> Request</span><span class="${step>=2?'reached':''} ${step>=3?'connected':''}"><i>2</i> Approval</span><span class="${step>=3?'reached':''}"><i>3</i> Exchange</span></div>`;
+}
+function renderOrderCard(order) {
+  const isSeller=order.myRole==='seller';
+  let guidance='';
+  let actions='';
+  if(isSeller&&order.queueStatus==='queued'){
+    guidance=order.queuePosition===1?'This is the next request. Approval reserves the item and closes the remaining requests.':`Request ${order.queuePosition} in line. Review earlier requests first, or decline this one.`;
+    actions=`${order.queuePosition===1?`<button class="primary" type="button" data-order-action="approved" data-order-id="${order.id}">Approve &amp; reserve item</button>`:''}<button class="filterbtn" type="button" data-order-action="cancelled" data-order-id="${order.id}">Decline request</button>`;
+  }else if(!isSeller&&order.queueStatus==='queued'){
+    guidance=`You’re ${order.queuePosition===1?'next':`#${order.queuePosition}`} in line. The seller reviews requests in the order they arrive.`;
+    actions='<button class="filterbtn" type="button" data-order-action="cancelled" data-order-id="'+order.id+'">Cancel request</button>';
+  }else if(isSeller&&order.queueStatus==='approved'){
+    guidance=order.hasPaymentSession?'Payment is being processed. The item will be marked sold when payment is confirmed.':'Arrange the handoff with the buyer. After they receive the item, confirm the exchange to mark it sold.';
+    actions=order.hasPaymentSession?'':'<button class="primary" type="button" data-order-action="completed" data-order-id="'+order.id+'">Confirm handoff &amp; mark sold</button><button class="filterbtn" type="button" data-order-action="cancelled" data-order-id="'+order.id+'">Cancel order</button>';
+  }else if(!isSeller&&order.queueStatus==='approved'){
+    guidance=order.hasPaymentSession?'Payment is being processed. This order will update after Stripe confirms it.':'The seller approved your request. Arrange pickup or delivery with them, then the seller can confirm the handoff.';
+    actions=`${order.paymentReady&&!order.hasPaymentSession?'<button class="primary" type="button" data-order-action="pay" data-order-id="'+order.id+'">Pay securely</button>':''}<button class="filterbtn" type="button" data-order-message="${order.listingId}">Message seller</button>`;
+  }else if(order.queueStatus==='completed'){
+    actions=order.hasReviewed?'<span class="order-review-thanks">Review submitted. Thanks for sharing your experience.</span>':'<div class="order-review-prompt">How did the handoff go? Your review helps other members.</div><form class="order-review-form" data-review-order="'+order.id+'"><label>Rate '+esc(order.otherName)+'<select name="rating" required><option value="5">★★★★★ · Excellent</option><option value="4">★★★★☆ · Good</option><option value="3">★★★☆☆ · Okay</option><option value="2">★★☆☆☆ · Poor</option><option value="1">★☆☆☆☆ · Very poor</option></select></label><label class="order-review-comment">Add a note (optional)<textarea name="remarks" maxlength="2000" placeholder="How did the exchange go?"></textarea></label><button class="primary" type="submit">Submit review</button></form>';
+  }
+  const reviews=(order.reviews||[]).map(review=>`<div class="order-review-read"><strong>${esc(review.reviewerName)} · ${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}</strong>${review.remarks?`<p>${esc(review.remarks)}</p>`:''}</div>`).join('');
+  return `<article class="order-card"><div class="order-card-main"><div class="order-item-thumb">${order.itemPhoto?`<img src="${esc(order.itemPhoto)}" alt="">`:`<span>${esc(order.itemEmoji||'◇')}</span>`}</div><div class="order-card-copy"><div class="order-card-meta"><span>Order #${order.id} · ${isSeller?'Buyer':'Seller'}: ${esc(order.otherName)}</span><span class="order-state order-state-${esc(order.queueStatus)}">${esc(orderStateLabel(order))}</span></div><h4>${esc(order.itemTitle)}</h4><p>${price(order.amount)}</p><small>${esc(orderDate(order.date))}</small></div></div>${orderProgressMarkup(order)}${guidance?`<div class="order-guidance">${esc(guidance)}</div>`:''}${actions?`<div class="order-card-actions">${actions}</div>`:''}${reviews?`<div class="order-review-list">${reviews}</div>`:''}</article>`;
+}
+function renderListingStatusCard(listing) {
+  const labels={active:'Available',reserved:'Reserved',sold:'Sold',hidden:'Hidden by admin',traded:'Traded'};
+  let controls='';
+  if(listing.status==='active')controls=`<button type="button" class="filterbtn" data-listing-status="reserved" data-listing-id="${listing.id}">Mark reserved</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
+  else if(listing.status==='reserved'&&listing.approvedCount>0)controls='<span class="order-wait-note">Reserved for an approved order.</span>';
+  else if(listing.status==='reserved')controls=`<button type="button" class="filterbtn" data-listing-status="available" data-listing-id="${listing.id}">Make available</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
+  else if(listing.status==='sold')controls=`<button type="button" class="filterbtn" data-listing-status="available" data-listing-id="${listing.id}">Relist item</button>`;
+  return `<article class="managed-listing"><div><strong>${esc(listing.title)}</strong><small>${price(listing.price)} · ${listing.queuedCount} waiting request${listing.queuedCount===1?'':'s'}</small></div><span class="order-state order-state-${esc(listing.status)}">${esc(labels[listing.status]||listing.status)}</span><div class="managed-listing-actions">${controls}</div></article>`;
+}
+function defaultOrdersTab(data) {
+  if(data.orders.some(order=>order.myRole==='seller'&&order.queueStatus==='queued'))return 'selling';
+  if(data.orders.some(order=>order.myRole==='buyer'&&['queued','approved'].includes(order.queueStatus)))return 'buying';
+  if(data.orders.some(order=>order.myRole==='seller'))return 'selling';
+  if(data.orders.some(order=>order.myRole==='buyer'))return 'buying';
+  return 'listings';
+}
+function renderOrders(data, tab=selectedOrdersTab||'buying') {
+  const buying=data.orders.filter(order=>order.myRole==='buyer');
+  const selling=data.orders.filter(order=>order.myRole==='seller');
+  const waiting=data.orders.filter(order=>order.queueStatus==='queued').length;
+  const inProgress=data.orders.filter(order=>order.queueStatus==='approved').length;
+  const completed=data.orders.filter(order=>order.queueStatus==='completed').length;
+  const tabContent=tab==='selling'?`<div class="orders-section-heading"><div><h3>Requests from buyers</h3><small>Approve the next request to reserve the item.</small></div><span>${selling.length}</span></div>${selling.length?`<div class="order-stack">${selling.map(renderOrderCard).join('')}</div>`:'<div class="orders-empty"><strong>No buyer requests yet</strong><small>Requests for your items will show up here.</small></div>'}`:
+    tab==='listings'?`<div class="orders-section-heading"><div><h3>Your listed items</h3><small>Update availability or review buyer requests.</small></div><span>${data.myListings.length}</span></div>${data.myListings.length?`<div class="managed-listings">${data.myListings.map(renderListingStatusCard).join('')}</div>`:'<div class="orders-empty"><strong>No items listed yet</strong><small>Publish an item and manage it here.</small></div>'}<p class="orders-footnote">Marking an item sold offline closes its open requests. Complete an approved order after the handoff so both people can leave a review.</p>`:
+    `<div class="orders-section-heading"><div><h3>Your purchase requests</h3><small>Follow each request until the exchange is complete.</small></div><span>${buying.length}</span></div>${buying.length?`<div class="order-stack">${buying.map(renderOrderCard).join('')}</div>`:'<div class="orders-empty"><strong>No purchase requests yet</strong><small>When you request an item, its progress will show up here.</small></div>'}`;
+  return `<div class="modalhead"><div><div class="eyebrow">BUYING &amp; SELLING</div><h2>Orders &amp; transactions</h2><p>See what needs your attention and follow each exchange.</p></div><button class="close" type="button" onclick="closeModal()" aria-label="Close orders">×</button></div>
+    <div class="orders-summary"><div><strong>${waiting}</strong><span>Waiting</span></div><div><strong>${inProgress}</strong><span>In progress</span></div><div><strong>${completed}</strong><span>Completed</span></div></div>
+    <div class="orders-how"><strong>How it works</strong><span><b>1</b> Buyer requests</span><span><b>2</b> Seller approves</span><span><b>3</b> Confirm handoff</span></div>
+    <nav class="orders-tabs" aria-label="Order sections"><button type="button" class="orders-tab ${tab==='buying'?'active':''}" data-orders-tab="buying">Buying <b>${buying.length}</b></button><button type="button" class="orders-tab ${tab==='selling'?'active':''}" data-orders-tab="selling">Selling <b>${selling.length}</b></button><button type="button" class="orders-tab ${tab==='listings'?'active':''}" data-orders-tab="listings">My items <b>${data.myListings.length}</b></button></nav>
+    <section class="orders-section orders-tab-panel">${tabContent}</section>`;
+}
+async function openOrders(tab=null) {
+  if(!currentUser){openAccount();notify('Sign in to view orders.');return;}
+  if(tab)selectedOrdersTab=tab;
+  showModal('<div class="modalhead"><div><h2>Orders &amp; transactions</h2><p>Loading your orders…</p></div><button class="close" onclick="closeModal()" aria-label="Close orders">×</button></div>');
+  $('#modal').classList.add('orders-modal');
+  try { const data=await request('/api/orders');latestOrdersData=data;if(!selectedOrdersTab)selectedOrdersTab=defaultOrdersTab(data);$('#modal').innerHTML=renderOrders(data,selectedOrdersTab);$('#modal').classList.add('orders-modal'); }
+  catch(error){$('#modal').innerHTML=`<div class="modalhead"><div><h2>Orders &amp; transactions</h2><p>${esc(error.message)}</p></div><button class="close" onclick="closeModal()" aria-label="Close orders">×</button></div>`;$('#modal').classList.add('orders-modal');}
+}
+function openListingManager(){return openOrders('listings');}
+$('#modal').addEventListener('click',async event=>{
+  const tabButton=event.target.closest('[data-orders-tab]');
+  if(tabButton&&latestOrdersData){selectedOrdersTab=tabButton.dataset.ordersTab;$('#modal').innerHTML=renderOrders(latestOrdersData,selectedOrdersTab);$('#modal').classList.add('orders-modal');return;}
+  const messageButton=event.target.closest('[data-order-message]');
+  if(messageButton){openConversation(Number(messageButton.dataset.orderMessage));return;}
+  const orderButton=event.target.closest('[data-order-action]');
+  if(orderButton){
+    const action=orderButton.dataset.orderAction,id=Number(orderButton.dataset.orderId);orderButton.disabled=true;
+    try{
+      if(action==='pay'){const result=await post('/api/payments/checkout',{orderId:id});location.href=result.url;return;}
+      await patch(`/api/orders/${id}`,{action});
+      notify(action==='approved'?'Order approved. The item is now reserved.':action==='completed'?'Exchange completed. The item is marked sold.':'Order updated.');
+      await openOrders();
+    }catch(error){notify(error.message);orderButton.disabled=false;}
+    return;
+  }
+  const listingButton=event.target.closest('[data-listing-status]');
+  if(listingButton){
+    listingButton.disabled=true;
+    try{await patch(`/api/listings/${Number(listingButton.dataset.listingId)}/status`,{status:listingButton.dataset.listingStatus});notify('Listing status updated.');await openOrders();}
+    catch(error){notify(error.message);listingButton.disabled=false;}
+  }
+});
+$('#modal').addEventListener('submit',async event=>{
+  const form=event.target.closest('.order-review-form');if(!form)return;event.preventDefault();
+  const submit=form.querySelector('[type="submit"]');submit.disabled=true;
+  try{const values=new FormData(form);await post(`/api/orders/${Number(form.dataset.reviewOrder)}/reviews`,{rating:Number(values.get('rating')),remarks:values.get('remarks')});notify('Your review was submitted.');await openOrders();}
+  catch(error){notify(error.message);submit.disabled=false;}
+});
 async function openOffers() {
   if (!currentUser) { openAccount(); notify('Sign in to view trade offers.'); return; }
   try {
@@ -455,6 +584,7 @@ async function openConversation(listingId, otherId) {
     try { sessionStorage.setItem('goodfind_pending_conversation',JSON.stringify({listingId:Number(listingId),otherId:otherId==null?null:Number(otherId)})); } catch {}
     openAccount(); notify('Sign in first. Your conversation will open when you return.'); return;
   }
+  if (currentUser.role!=='admin'&&currentUser.idVerificationStatus!=='verified') { accountPanel(); notify('Verify your school ID before messaging members.'); return; }
   const item = [...extra,...listings].find(row=>Number(row.id)===Number(listingId)); if (!item) return;
   if (!item.sellerId) { notify('Sample listings are view-only.'); return; }
   try {

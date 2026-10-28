@@ -88,6 +88,14 @@ async function initializeDatabase() {
     PRIMARY KEY (listing_id,photo_order),
     CONSTRAINT fk_listing_photos_listing FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  const reviewIndex=await db.prepare("SELECT COUNT(*) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='reviews' AND INDEX_NAME='uq_reviews_order_reviewer'").get();
+  if(!Number(reviewIndex.n))await db.prepare('CREATE UNIQUE INDEX uq_reviews_order_reviewer ON reviews(order_id,reviewer_id)').run();
+  const oldReviewIndex=await db.prepare("SELECT COUNT(*) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='reviews' AND INDEX_NAME='uq_reviews_order'").get();
+  if(Number(oldReviewIndex.n))await db.prepare('ALTER TABLE reviews DROP INDEX uq_reviews_order').run();
+  for(const [name,columns] of [['idx_orders_seller_queue','seller_id,queue_status,order_date'],['idx_orders_buyer_queue','buyer_id,queue_status,order_date'],['idx_orders_listing_queue','listing_id,queue_status,order_date']]){
+    const index=await db.prepare("SELECT COUNT(*) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='orders' AND INDEX_NAME=?").get(name);
+    if(!Number(index.n))await db.prepare(`CREATE INDEX ${name} ON orders(${columns})`).run();
+  }
 }
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 function send(res, status, payload, headers = {}) {
@@ -122,13 +130,16 @@ function parseCookies(req) {
   return out;
 }
 async function currentUser(req) {
-  const token = parseCookies(req).goodfind_session;
+  const pathName=new URL(req.url,'http://localhost').pathname;
+  const cookies=parseCookies(req);
+  const token=pathName.startsWith('/api/admin/')?cookies.goodfind_admin_session:cookies.goodfind_session;
   if (!token) return null;
   const row = await db.prepare(`SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>?`).get(crypto.createHash('sha256').update(token).digest('hex'), Date.now());
   return row || null;
 }
 async function requireUser(req) { const user = await currentUser(req); if (!user) fail(401, 'Sign in to continue.'); return user; }
+async function requireVerifiedUser(req) { const user=await requireUser(req); if(user.role!=='admin'&&user.id_verification_status!=='verified')fail(403,'Verify your school ID before listing, ordering, or trading.'); return user; }
 async function requireAdmin(req) { const user = await requireUser(req); if (user.role !== 'admin') fail(403, 'Admin access is required.'); return user; }
 function sameOrigin(req) {
   const origin = req.headers.origin;
@@ -195,19 +206,22 @@ function rateLimitLogin(req) {
   entry.count++; loginAttempts.set(key, entry);
   if (entry.count > 20) fail(429, 'Too many sign-in attempts. Try again in 15 minutes.');
 }
-async function createSession(user, res) {
+async function createSession(user, res, adminSession=false) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expiry = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
   await db.prepare('DELETE FROM sessions WHERE expires_at<?').run(Date.now());
   await db.prepare('INSERT INTO sessions (token_hash,user_id,expires_at,created_at) VALUES (?,?,?,?)')
     .run(crypto.createHash('sha256').update(token).digest('hex'), user.id, expiry, nowIso());
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  res.setHeader('Set-Cookie', `goodfind_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}${secure}`);
+  const cookieName=adminSession?'goodfind_admin_session':'goodfind_session';
+  res.setHeader('Set-Cookie', `${cookieName}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}${secure}`);
 }
 async function clearSession(req, res) {
-  const token = parseCookies(req).goodfind_session;
+  const pathName=new URL(req.url,'http://localhost').pathname;
+  const cookieName=pathName.startsWith('/api/admin/')?'goodfind_admin_session':'goodfind_session';
+  const token=parseCookies(req)[cookieName];
   if (token) await db.prepare('DELETE FROM sessions WHERE token_hash=?').run(crypto.createHash('sha256').update(token).digest('hex'));
-  res.setHeader('Set-Cookie', 'goodfind_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0' + (process.env.NODE_ENV === 'production' ? '; Secure' : ''));
+  res.setHeader('Set-Cookie', `${cookieName}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0` + (process.env.NODE_ENV === 'production' ? '; Secure' : ''));
 }
 function validStripeSignature(raw, header) {
   const fields = Object.fromEntries((header || '').split(',').map(x => x.split('=', 2)));
@@ -236,6 +250,10 @@ async function api(req, res, url) {
   if (method !== 'GET' && route !== '/api/payments/stripe-webhook') sameOrigin(req);
 
   if (method === 'GET' && route === '/api/health') return send(res, 200, { ok:true, paymentsConfigured:Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET), storage:'mysql' });
+  if (method === 'GET' && route === '/api/admin/me') {
+    const user=await currentUser(req);
+    return send(res,200,{user:user?.role==='admin'?safeUser(user):null});
+  }
   if (method === 'GET' && route === '/api/admin/overview') {
     await requireAdmin(req);
     const counts = {
@@ -257,8 +275,11 @@ async function api(req, res, url) {
     await requireAdmin(req);
     const id=Number(route.split('/').pop());const body=await readBody(req);
     if(!['verified','rejected'].includes(body.status))fail(400,'Choose verified or rejected.');
-    const result=await db.prepare("UPDATE users SET id_verification_status=?,id_photo_data=NULL WHERE id=? AND id_verification_status='pending'").run(body.status,id);
-    if(!result.changes)fail(404,'Pending ID verification not found.');
+    await db.transaction(async()=>{
+      const result=await db.prepare("UPDATE users SET id_verification_status=?,id_photo_data=NULL WHERE id=? AND id_verification_status='pending'").run(body.status,id);
+      if(!result.changes)fail(404,'Pending ID verification not found.');
+      await db.prepare('UPDATE listings SET verified=? WHERE seller_id=?').run(body.status==='verified'?1:0,id);
+    });
     return send(res,200,{id,status:body.status});
   }
   if (method === 'PATCH' && /^\/api\/admin\/listings\/\d+$/.test(route)) {
@@ -280,6 +301,60 @@ async function api(req, res, url) {
     return send(res, 200, { listing:publicListing(row,true,[...(row.photo_data?[row.photo_data]:[]),...extras.map(photo=>photo.photo_data)]) });
   }
   if (method === 'GET' && route === '/api/auth/me') return send(res, 200, { user:safeUser(await currentUser(req)) });
+  if (method === 'GET' && route === '/api/auth/listings') {
+    const user=await requireUser(req);
+    const rows=await db.prepare(`SELECT l.id,l.title,l.status,l.price_cents,l.category,l.emoji,l.art,l.photo_data,l.created_at
+      FROM listings l WHERE l.seller_id=? ORDER BY l.created_at DESC,l.id DESC LIMIT 6`).all(user.id);
+    return send(res,200,{listings:rows.map(row=>({id:Number(row.id),title:row.title,status:row.status,price:Number(row.price_cents)/100,
+      category:row.category,emoji:row.emoji,art:row.art,photoData:row.photo_data||null,createdAt:row.created_at}))});
+  }
+  if (method === 'GET' && route === '/api/orders') {
+    const user=await requireUser(req);
+    const rows=await db.prepare(`SELECT o.id,o.listing_id,o.buyer_id,o.seller_id,o.order_date,o.queue_status,o.amount_cents,o.currency,o.status,o.stripe_session_id,
+      l.title,l.status AS listing_status,l.photo_data,l.emoji,l.art,b.display_name AS buyer_name,s.display_name AS seller_name,
+      s.stripe_account_id AS seller_stripe_account,s.stripe_charges_enabled AS seller_charges_enabled,s.stripe_payouts_enabled AS seller_payouts_enabled,
+      CASE WHEN o.queue_status='queued' THEN (SELECT COUNT(*) FROM orders q WHERE q.listing_id=o.listing_id AND q.queue_status='queued' AND (q.order_date<o.order_date OR (q.order_date=o.order_date AND q.id<=o.id))) ELSE NULL END AS queue_position,
+      EXISTS(SELECT 1 FROM reviews r WHERE r.order_id=o.id AND r.reviewer_id=?) AS has_review
+      FROM orders o JOIN listings l ON l.id=o.listing_id JOIN users b ON b.id=o.buyer_id JOIN users s ON s.id=o.seller_id
+      WHERE o.buyer_id=? OR o.seller_id=? ORDER BY o.order_date DESC,o.id DESC`).all(user.id,user.id,user.id);
+    let reviewsByOrder=new Map();
+    if(rows.length){
+      const ids=rows.map(row=>Number(row.id));
+      const reviews=await db.prepare(`SELECT r.order_id,r.reviewer_id,r.rating,r.remarks,r.created_at,u.display_name AS reviewer_name FROM reviews r JOIN users u ON u.id=r.reviewer_id WHERE r.order_id IN (${ids.map(()=>'?').join(',')}) ORDER BY r.created_at`).all(...ids);
+      reviewsByOrder=new Map(ids.map(id=>[id,[]]));
+      for(const review of reviews)reviewsByOrder.get(Number(review.order_id))?.push({reviewerId:Number(review.reviewer_id),reviewerName:review.reviewer_name,rating:Number(review.rating),remarks:review.remarks,createdAt:review.created_at});
+    }
+    const orders=rows.map(row=>{
+      const isSeller=Number(row.seller_id)===Number(user.id);
+      return {id:Number(row.id),listingId:Number(row.listing_id),buyerId:Number(row.buyer_id),sellerId:Number(row.seller_id),buyerName:row.buyer_name,sellerName:row.seller_name,
+        otherName:isSeller?row.buyer_name:row.seller_name,myRole:isSeller?'seller':'buyer',itemTitle:row.title,itemStatus:row.listing_status,itemPhoto:row.photo_data||null,itemEmoji:row.emoji,itemArt:row.art,
+        date:row.order_date,queueStatus:row.queue_status,queuePosition:row.queue_position===null?null:Number(row.queue_position),status:row.status,amount:Number(row.amount_cents)/100,currency:row.currency,
+        hasReviewed:Boolean(row.has_review),reviews:reviewsByOrder.get(Number(row.id))||[],hasPaymentSession:Boolean(row.stripe_session_id),
+        paymentReady:Boolean(process.env.STRIPE_SECRET_KEY&&process.env.STRIPE_WEBHOOK_SECRET&&row.seller_stripe_account&&row.seller_charges_enabled&&row.seller_payouts_enabled)};
+    });
+    const listingRows=await db.prepare(`SELECT l.id,l.title,l.status,l.price_cents,
+      (SELECT COUNT(*) FROM orders o WHERE o.listing_id=l.id AND o.queue_status='queued') AS queued_count,
+      (SELECT COUNT(*) FROM orders o WHERE o.listing_id=l.id AND o.queue_status='approved') AS approved_count
+      FROM listings l WHERE l.seller_id=? ORDER BY l.created_at DESC`).all(user.id);
+    return send(res,200,{orders,myListings:listingRows.map(row=>({id:Number(row.id),title:row.title,status:row.status,price:Number(row.price_cents)/100,queuedCount:Number(row.queued_count),approvedCount:Number(row.approved_count)}))});
+  }
+  if (method === 'POST' && route === '/api/orders') {
+    const user=await requireVerifiedUser(req);const body=await readBody(req);const listingId=Number(body.listingId);
+    if(!Number.isSafeInteger(listingId)||listingId<1)fail(400,'Choose an available item to request.');
+    const orderId=await db.transaction(async()=>{
+      const listing=await db.prepare('SELECT * FROM listings WHERE id=? FOR UPDATE').get(listingId);
+      if(!listing||listing.status!=='active')fail(409,'This item is no longer available.');
+      if(!listing.seller_id)fail(400,'Only member listings can receive order requests.');
+      if(Number(listing.seller_id)===Number(user.id))fail(403,'You cannot request your own listing.');
+      const prior=await db.prepare("SELECT id FROM orders WHERE listing_id=? AND buyer_id=? AND queue_status IN ('queued','approved') LIMIT 1").get(listing.id,user.id);
+      if(prior)fail(409,'You already have an open request for this item.');
+      const timestamp=nowIso();
+      const result=await db.prepare(`INSERT INTO orders(listing_id,buyer_id,seller_id,order_date,amount_cents,currency,created_at,queue_status)
+        VALUES(?,?,?,?,?,?,?,'queued')`).run(listing.id,user.id,listing.seller_id,timestamp,listing.price_cents,(process.env.PLATFORM_CURRENCY||'php').toLowerCase(),timestamp);
+      return Number(result.lastInsertRowid);
+    });
+    return send(res,201,{orderId,queueStatus:'queued'});
+  }
   if (method === 'PATCH' && route === '/api/auth/profile') {
     const user = await requireUser(req); const body = await readBody(req);
     const displayName = text(body.displayName, 60, 'Full name');
@@ -300,6 +375,7 @@ async function api(req, res, url) {
       profilePhoto = body.profilePhoto;
     }
     await db.prepare("UPDATE users SET school_id=?,display_name=?,full_name=?,contact_no=?,profile_photo=?,id_photo_data=COALESCE(?,id_photo_data),id_verification_status=CASE WHEN ? IS NOT NULL THEN 'pending' WHEN ? THEN 'unsubmitted' ELSE id_verification_status END WHERE id=?").run(schoolId,displayName,displayName,contactNo,profilePhoto,submittedIdPhoto,submittedIdPhoto,idChanged,user.id);
+    if(submittedIdPhoto)await db.prepare('UPDATE listings SET verified=0 WHERE seller_id=?').run(user.id);
     await db.prepare('UPDATE listings SET seller_name=?,initial=? WHERE seller_id=?').run(displayName,displayName.slice(0,2).toUpperCase(),user.id);
     return send(res, 200, { user:safeUser(await db.prepare('SELECT * FROM users WHERE id=?').get(user.id)) });
   }
@@ -332,12 +408,13 @@ async function api(req, res, url) {
     const adminLogin = route === '/api/admin/login';
     if (adminLogin && user.role !== 'admin') fail(403, 'This account does not have admin access.');
     if (!adminLogin && user.role === 'admin') fail(403, 'Administrators must sign in from the dedicated admin login page.');
-    await createSession(user, res); return send(res, 200, { user:safeUser(user) });
+    await createSession(user, res, adminLogin); return send(res, 200, { user:safeUser(user) });
   }
   if (method === 'POST' && route === '/api/auth/logout') { await clearSession(req, res); return send(res, 200, { ok:true }); }
+  if (method === 'POST' && route === '/api/admin/logout') { await clearSession(req, res); return send(res, 200, { ok:true }); }
 
   if (method === 'POST' && route === '/api/listings') {
-    const user = await requireUser(req); const body = await readBody(req);
+    const user = await requireVerifiedUser(req); const body = await readBody(req);
     const title = text(body.title, 100, 'Title'); const description = text(body.description, 2000, 'Description', 5);
     const price = Number(body.price); if (!Number.isFinite(price) || price < 1 || price > 1000000) fail(400, 'Price must be between PHP 1 and PHP 1,000,000.');
     const validatePhoto = value => {
@@ -364,6 +441,7 @@ async function api(req, res, url) {
       const inserted=await db.prepare(`INSERT INTO listings(seller_id,title,seller_name,initial,price_cents,kind,category_id,category,\`condition\`,place,emoji,art,photo_data,note,open_to_trade,description,created_at)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(user.id,title,user.display_name,user.display_name.slice(0,1).toUpperCase(),Math.round(price*100),kind,categoryId,category,condition,place,kind==='digital'?'💾':'✨',palette,photoData,'JUST LISTED',body.trade?1:0,description,nowIso());
       const listingId=Number(inserted.lastInsertRowid);
+      await db.prepare('UPDATE listings SET verified=? WHERE id=?').run(user.id_verification_status==='verified'?1:0,listingId);
       for(let index=1;index<photosData.length;index++)await db.prepare('INSERT INTO listing_photos(listing_id,photo_order,photo_data) VALUES(?,?,?)').run(listingId,index+1,photosData[index]);
       return inserted;
     });
@@ -371,8 +449,83 @@ async function api(req, res, url) {
     return send(res, 201, { listing:publicListing(await db.prepare('SELECT * FROM listings WHERE id=?').get(listingId),true,photosData) });
   }
 
+  const listingStatusMatch=route.match(/^\/api\/listings\/(\d+)\/status$/);
+  if(method==='PATCH'&&listingStatusMatch){
+    const user=await requireVerifiedUser(req);const body=await readBody(req);
+    const stateMap={available:'active',reserved:'reserved',sold:'sold'};const target=stateMap[body.status];
+    if(!target)fail(400,'Choose Available, Reserved, or Sold.');
+    const listingId=Number(listingStatusMatch[1]);
+    await db.transaction(async()=>{
+      const listing=await db.prepare('SELECT * FROM listings WHERE id=? FOR UPDATE').get(listingId);
+      if(!listing||Number(listing.seller_id)!==Number(user.id))fail(404,'Your listing could not be found.');
+      if(['hidden','traded'].includes(listing.status))fail(409,'This listing status can only be changed by its current marketplace process.');
+      const approved=await db.prepare("SELECT id FROM orders WHERE listing_id=? AND queue_status='approved' LIMIT 1 FOR UPDATE").get(listing.id);
+      if(approved&&target==='sold')fail(409,'Complete the approved order to mark this item sold and enable reviews.');
+      if(approved&&target!=='reserved')fail(409,'This item is reserved for an approved order. Complete or cancel that order first.');
+      await db.prepare('UPDATE listings SET status=? WHERE id=?').run(target,listing.id);
+      if(target==='sold')await db.prepare("UPDATE orders SET queue_status='cancelled',status='cancelled' WHERE listing_id=? AND queue_status='queued'").run(listing.id);
+    });
+    return send(res,200,{listingId,status:target});
+  }
+
+  const orderMatch=route.match(/^\/api\/orders\/(\d+)$/);
+  if(method==='PATCH'&&orderMatch){
+    const user=await requireUser(req);const body=await readBody(req);const action=body.action;
+    if(!['approved','cancelled','completed'].includes(action))fail(400,'Choose Approve, Decline, or Complete exchange.');
+    const orderId=Number(orderMatch[1]);
+    await db.transaction(async()=>{
+      const order=await db.prepare('SELECT * FROM orders WHERE id=? FOR UPDATE').get(orderId);
+      if(!order)fail(404,'Order request not found.');
+      if(action==='approved'){
+        if(Number(order.seller_id)!==Number(user.id))fail(403,'Only the seller can approve this order.');
+        if(order.queue_status!=='queued')fail(409,'This request is no longer waiting for approval.');
+        const first=await db.prepare("SELECT id FROM orders WHERE listing_id=? AND queue_status='queued' ORDER BY order_date,id LIMIT 1 FOR UPDATE").get(order.listing_id);
+        if(!first||Number(first.id)!==Number(order.id))fail(409,'Review the earlier queued request first.');
+        const listing=await db.prepare('SELECT * FROM listings WHERE id=? FOR UPDATE').get(order.listing_id);
+        if(!listing||Number(listing.seller_id)!==Number(user.id)||listing.status!=='active')fail(409,'This listing is not available to approve.');
+        await db.prepare("UPDATE listings SET status='reserved' WHERE id=? AND status='active'").run(listing.id);
+        await db.prepare("UPDATE orders SET queue_status='approved',status='pending' WHERE id=? AND queue_status='queued'").run(order.id);
+        await db.prepare("UPDATE orders SET queue_status='cancelled',status='cancelled' WHERE listing_id=? AND id<>? AND queue_status='queued'").run(order.listing_id,order.id);
+      }else if(action==='cancelled'){
+        const isBuyer=Number(order.buyer_id)===Number(user.id),isSeller=Number(order.seller_id)===Number(user.id);
+        if(!isBuyer&&!isSeller)fail(403,'You cannot cancel this order.');
+        const canCancelQueued=order.queue_status==='queued';
+        const canCancelApproved=order.queue_status==='approved'&&!order.stripe_session_id;
+        if(!canCancelQueued&&!canCancelApproved)fail(409,'This order can no longer be cancelled here.');
+        await db.prepare("UPDATE orders SET queue_status='cancelled',status='cancelled' WHERE id=?").run(order.id);
+        if(canCancelApproved)await db.prepare("UPDATE listings SET status='active' WHERE id=? AND seller_id=? AND status='reserved'").run(order.listing_id,order.seller_id);
+      }else{
+        if(Number(order.seller_id)!==Number(user.id))fail(403,'Only the seller can confirm the exchange.');
+        if(order.queue_status!=='approved')fail(409,'Only an approved order can be completed.');
+        if(order.stripe_session_id)fail(409,'This order has secure checkout in progress. Wait for payment confirmation before completing it.');
+        const listing=await db.prepare('SELECT * FROM listings WHERE id=? FOR UPDATE').get(order.listing_id);
+        if(!listing||Number(listing.seller_id)!==Number(user.id)||listing.status!=='reserved')fail(409,'The reserved listing could not be completed.');
+        await db.prepare("UPDATE orders SET queue_status='completed',status='completed' WHERE id=? AND queue_status='approved'").run(order.id);
+        await db.prepare("UPDATE listings SET status='sold' WHERE id=? AND seller_id=? AND status='reserved'").run(listing.id,user.id);
+      }
+    });
+    return send(res,200,{orderId,action,queueStatus:action==='approved'?'approved':action==='completed'?'completed':'cancelled'});
+  }
+
+  const reviewMatch=route.match(/^\/api\/orders\/(\d+)\/reviews$/);
+  if(method==='POST'&&reviewMatch){
+    const user=await requireUser(req);const body=await readBody(req);const orderId=Number(reviewMatch[1]);
+    const rating=Number(body.rating);if(!Number.isInteger(rating)||rating<1||rating>5)fail(400,'Choose a rating from 1 to 5.');
+    const remarks=typeof body.remarks==='string'?body.remarks.trim().slice(0,2000):'';
+    const reviewId=await db.transaction(async()=>{
+      const order=await db.prepare('SELECT * FROM orders WHERE id=? FOR UPDATE').get(orderId);
+      if(!order||order.queue_status!=='completed')fail(409,'Reviews are available after a completed exchange.');
+      if(Number(order.buyer_id)!==Number(user.id)&&Number(order.seller_id)!==Number(user.id))fail(403,'Only the buyer and seller can review this exchange.');
+      const previous=await db.prepare('SELECT review_id FROM reviews WHERE order_id=? AND reviewer_id=?').get(order.id,user.id);
+      if(previous)fail(409,'You already reviewed this exchange.');
+      const result=await db.prepare('INSERT INTO reviews(order_id,reviewer_id,rating,remarks,created_at) VALUES(?,?,?,?,?)').run(order.id,user.id,rating,remarks,nowIso());
+      return Number(result.lastInsertRowid);
+    });
+    return send(res,201,{reviewId,orderId,rating,remarks});
+  }
+
   if (method === 'POST' && route === '/api/trades') {
-    const user = await requireUser(req); const body = await readBody(req); const listingId = Number(body.listingId); const offeredId = Number(body.offeredListingId);
+    const user = await requireVerifiedUser(req); const body = await readBody(req); const listingId = Number(body.listingId); const offeredId = Number(body.offeredListingId);
     const wanted = await db.prepare("SELECT * FROM listings WHERE id=? AND status='active'").get(listingId);
     const offered = await db.prepare("SELECT * FROM listings WHERE id=? AND status='active'").get(offeredId);
     if (!wanted || !offered) fail(404, 'One of those listings is no longer available.');
@@ -396,7 +549,7 @@ async function api(req, res, url) {
   }
   const tradeMatch = route.match(/^\/api\/trades\/(\d+)$/);
   if (method === 'PATCH' && tradeMatch) {
-    const user = await requireUser(req); const body = await readBody(req); const status = body.status;
+    const user = await requireVerifiedUser(req); const body = await readBody(req); const status = body.status;
     if (!['accepted','declined','withdrawn'].includes(status)) fail(400, 'Choose accepted, declined, or withdrawn.');
     const offer = await db.prepare('SELECT * FROM trade_offers WHERE id=?').get(Number(tradeMatch[1]));
     if (!offer) fail(404, 'Trade offer not found.');
@@ -411,6 +564,7 @@ async function api(req, res, url) {
         const offered = await db.prepare("SELECT status,seller_id FROM listings WHERE id=?").get(offer.offered_listing_id);
         if (wanted?.status !== 'active' || offered?.status !== 'active' || offered?.seller_id !== offer.sender_id) throw new HttpError(409,'One of the items is no longer available.');
         await db.prepare("UPDATE listings SET status='traded' WHERE id IN (?,?)").run(offer.listing_id,offer.offered_listing_id);
+        await db.prepare("UPDATE orders SET queue_status='cancelled',status='cancelled' WHERE listing_id IN (?,?) AND queue_status='queued'").run(offer.listing_id,offer.offered_listing_id);
         await db.prepare("UPDATE trade_offers SET status='declined',updated_at=? WHERE status='pending' AND id<>? AND (listing_id IN (?,?) OR offered_listing_id IN (?,?))")
           .run(nowIso(),offer.id,offer.listing_id,offer.offered_listing_id,offer.listing_id,offer.offered_listing_id);
       }
@@ -446,7 +600,7 @@ async function api(req, res, url) {
     return send(res, 200, { messages:rows.map(m=>({id:m.id,body:m.body,createdAt:m.created_at,senderId:m.sender_id,sender:m.sender_name,mine:Number(m.sender_id)===Number(user.id)})) });
   }
   if (messageMatch && method === 'POST') {
-    const user = await requireUser(req); const body = await readBody(req); const listingId = Number(messageMatch[1]);
+    const user = await requireVerifiedUser(req); const body = await readBody(req); const listingId = Number(messageMatch[1]);
     const listing = await db.prepare("SELECT * FROM listings WHERE id=? AND status='active'").get(listingId); if (!listing) fail(404, 'Listing not found.');
     if (!listing.seller_id) fail(400, 'Messages are available for member listings.');
     const isSeller = Number(user.id) === Number(listing.seller_id);
@@ -479,48 +633,37 @@ async function api(req, res, url) {
     return send(res,200,{connected:Boolean(account.charges_enabled&&account.payouts_enabled)});
   }
   if (method === 'POST' && route === '/api/payments/checkout') {
-    const user = await requireUser(req); const feeBps = stripeReady(); const body = await readBody(req); const listing = await db.prepare("SELECT * FROM listings WHERE id=? AND status='active'").get(Number(body.listingId));
-    if (!listing) fail(404,'This listing is no longer available.');
-    if (!listing.seller_id || listing.seller_id===user.id) fail(400,'You can only buy another member’s listing.');
-    const seller = await db.prepare('SELECT * FROM users WHERE id=?').get(listing.seller_id);
+    const user = await requireVerifiedUser(req); const feeBps = stripeReady(); const body = await readBody(req); const orderId=Number(body.orderId);
+    if(!Number.isSafeInteger(orderId)||orderId<1)fail(400,'Choose an approved order to pay.');
+    const order=await db.prepare("SELECT * FROM orders WHERE id=? AND buyer_id=? AND queue_status='approved' AND status='pending' AND stripe_session_id IS NULL").get(orderId,user.id);
+    if(!order)fail(409,'Only an approved, unpaid order can use secure checkout.');
+    const listing=await db.prepare("SELECT * FROM listings WHERE id=? AND status='reserved'").get(order.listing_id);
+    if(!listing)fail(409,'The item is no longer reserved for this order.');
+    const seller = await db.prepare('SELECT * FROM users WHERE id=?').get(order.seller_id);
     if (!seller?.stripe_account_id || !seller.stripe_charges_enabled || !seller.stripe_payouts_enabled) fail(409,'The seller has not finished setting up payouts yet.');
-    await db.exec('BEGIN IMMEDIATE'); let orderId;
-    try {
-      const reserve = await db.prepare("UPDATE listings SET status='reserved' WHERE id=? AND status='active'").run(listing.id);
-      if (!reserve.changes) fail(409,'This item is being checked out by someone else.');
-      const orderDate=nowIso();
-      const order = await db.prepare(`INSERT INTO orders(listing_id,buyer_id,seller_id,amount_cents,currency,created_at,order_date,queue_status)
-        VALUES(?,?,?,?,?,?,?,'queued')`).run(listing.id,user.id,seller.id,listing.price_cents,(process.env.PLATFORM_CURRENCY||'php').toLowerCase(),orderDate,orderDate);
-      orderId = Number(order.lastInsertRowid); await db.exec('COMMIT');
-    } catch (error) { if (db.isTransaction) await db.exec('ROLLBACK'); throw error; }
     const fee = Math.floor(listing.price_cents*feeBps/10000);
-    try {
-      const session = await stripePost('checkout/sessions',{
-        mode:'payment',success_url:`${APP_URL}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url:`${APP_URL}/?payment=cancel&order_id=${orderId}`,client_reference_id:String(orderId),
-        'line_items[0][quantity]':'1','line_items[0][price_data][currency]':(process.env.PLATFORM_CURRENCY||'php').toLowerCase(),
-        'line_items[0][price_data][unit_amount]':String(listing.price_cents),
-        'line_items[0][price_data][product_data][name]':listing.title,
-        'payment_intent_data[application_fee_amount]':String(fee),
-        'payment_intent_data[transfer_data][destination]':seller.stripe_account_id,
-        'metadata[order_id]':String(orderId),'metadata[listing_id]':String(listing.id)
-      });
-      await db.prepare('UPDATE orders SET stripe_session_id=? WHERE id=?').run(session.id,orderId);
-      return send(res,201,{url:session.url});
-    } catch (error) {
-      await db.prepare("UPDATE orders SET status='failed',queue_status='cancelled' WHERE id=?").run(orderId);
-      await db.prepare("UPDATE listings SET status='active' WHERE id=? AND status='reserved'").run(listing.id);
-      throw error;
-    }
+    const session = await stripePost('checkout/sessions',{
+      mode:'payment',success_url:`${APP_URL}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:`${APP_URL}/?payment=cancel&order_id=${orderId}`,client_reference_id:String(orderId),
+      'line_items[0][quantity]':'1','line_items[0][price_data][currency]':(process.env.PLATFORM_CURRENCY||'php').toLowerCase(),
+      'line_items[0][price_data][unit_amount]':String(listing.price_cents),
+      'line_items[0][price_data][product_data][name]':listing.title,
+      'payment_intent_data[application_fee_amount]':String(fee),
+      'payment_intent_data[transfer_data][destination]':seller.stripe_account_id,
+      'metadata[order_id]':String(orderId),'metadata[listing_id]':String(listing.id)
+    });
+    const saved=await db.prepare("UPDATE orders SET stripe_session_id=? WHERE id=? AND queue_status='approved' AND status='pending' AND stripe_session_id IS NULL").run(session.id,orderId);
+    if(!saved.changes){try{await stripePost(`checkout/sessions/${encodeURIComponent(session.id)}/expire`,{});}catch{}fail(409,'This order changed while checkout was opening. Refresh your orders.');}
+    return send(res,201,{url:session.url});
   }
   if (method === 'POST' && route === '/api/payments/cancel') {
     const user = await requireUser(req); const body=await readBody(req); const orderId=Number(body.orderId);
-    const order=await db.prepare("SELECT * FROM orders WHERE id=? AND buyer_id=? AND status='pending'").get(orderId,user.id);
+    const order=await db.prepare("SELECT * FROM orders WHERE id=? AND buyer_id=? AND status='pending' AND queue_status='approved'").get(orderId,user.id);
     if (!order) return send(res,200,{ok:true});
     if (order.stripe_session_id) await stripePost(`checkout/sessions/${encodeURIComponent(order.stripe_session_id)}/expire`,{});
     await db.exec('BEGIN IMMEDIATE');
     try {
-      await db.prepare("UPDATE orders SET status='expired',queue_status='cancelled' WHERE id=? AND status='pending'").run(order.id);
+      await db.prepare("UPDATE orders SET status='expired',queue_status='cancelled' WHERE id=? AND status='pending' AND queue_status='approved'").run(order.id);
       await db.prepare("UPDATE listings SET status='active' WHERE id=? AND status='reserved'").run(order.listing_id);
       await db.exec('COMMIT');
     } catch(error) { if(db.isTransaction) await db.exec('ROLLBACK'); throw error; }
@@ -533,12 +676,12 @@ async function api(req, res, url) {
     if (event.type === 'checkout.session.completed' && event.data?.object?.payment_status === 'paid') {
       const session = event.data.object; const orderId = Number(session.client_reference_id || session.metadata?.order_id);
       if (orderId) {
-        const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status='pending'").get(orderId);
+        const order = await db.prepare("SELECT * FROM orders WHERE id=? AND status='pending' AND queue_status='approved'").get(orderId);
         if (order) {
           await db.exec('BEGIN IMMEDIATE');
           try {
-            await db.prepare("UPDATE orders SET status='paid',queue_status='completed',paid_at=? WHERE id=? AND status='pending'").run(nowIso(),order.id);
-            await db.prepare("UPDATE listings SET status='sold' WHERE id=? AND seller_id=? AND status='active'").run(order.listing_id,order.seller_id);
+            await db.prepare("UPDATE orders SET status='paid',queue_status='completed',paid_at=? WHERE id=? AND status='pending' AND queue_status='approved'").run(nowIso(),order.id);
+            await db.prepare("UPDATE listings SET status='sold' WHERE id=? AND seller_id=? AND status='reserved'").run(order.listing_id,order.seller_id);
             await db.exec('COMMIT');
           } catch (e) { await db.exec('ROLLBACK'); throw e; }
         }
@@ -546,8 +689,8 @@ async function api(req, res, url) {
     }
     if (event.type === 'checkout.session.expired') {
       const session = event.data?.object; if (session?.client_reference_id) {
-        const orderId=Number(session.client_reference_id); const order=await db.prepare("SELECT * FROM orders WHERE id=? AND status='pending'").get(orderId);
-        if(order){await db.exec('BEGIN IMMEDIATE');try{await db.prepare("UPDATE orders SET status='expired',queue_status='cancelled' WHERE id=? AND status='pending'").run(order.id);await db.prepare("UPDATE listings SET status='active' WHERE id=? AND status='reserved'").run(order.listing_id);await db.exec('COMMIT');}catch(error){if(db.isTransaction)await db.exec('ROLLBACK');throw error;}}
+        const orderId=Number(session.client_reference_id); const order=await db.prepare("SELECT * FROM orders WHERE id=? AND status='pending' AND queue_status='approved'").get(orderId);
+        if(order){await db.exec('BEGIN IMMEDIATE');try{await db.prepare("UPDATE orders SET status='expired',queue_status='cancelled' WHERE id=? AND status='pending' AND queue_status='approved'").run(order.id);await db.prepare("UPDATE listings SET status='active' WHERE id=? AND status='reserved'").run(order.listing_id);await db.exec('COMMIT');}catch(error){if(db.isTransaction)await db.exec('ROLLBACK');throw error;}}
       }
     }
     if (event.type === 'account.updated' && event.account && event.data?.object?.object === 'account') {
