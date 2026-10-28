@@ -303,8 +303,9 @@ async function api(req, res, url) {
   if (method === 'GET' && route === '/api/auth/me') return send(res, 200, { user:safeUser(await currentUser(req)) });
   if (method === 'GET' && route === '/api/auth/listings') {
     const user=await requireUser(req);
+    const allListings=url.searchParams.get('all')==='1';
     const rows=await db.prepare(`SELECT l.id,l.title,l.status,l.price_cents,l.category,l.emoji,l.art,l.photo_data,l.created_at
-      FROM listings l WHERE l.seller_id=? ORDER BY l.created_at DESC,l.id DESC LIMIT 6`).all(user.id);
+      FROM listings l WHERE l.seller_id=? ORDER BY l.created_at DESC,l.id DESC${allListings?'':' LIMIT 6'}`).all(user.id);
     return send(res,200,{listings:rows.map(row=>({id:Number(row.id),title:row.title,status:row.status,price:Number(row.price_cents)/100,
       category:row.category,emoji:row.emoji,art:row.art,photoData:row.photo_data||null,createdAt:row.created_at}))});
   }
@@ -593,6 +594,10 @@ async function api(req, res, url) {
     const isSeller = Number(user.id) === Number(sellerId);
     const otherId = isSeller ? Number(url.searchParams.get('with')) : sellerId;
     if (!otherId || otherId === user.id) fail(400, 'Choose a conversation member.');
+    if (listing.status === 'reserved') {
+      const approvedOrder=await db.prepare("SELECT 1 FROM orders WHERE listing_id=? AND queue_status='approved' AND buyer_id=? AND seller_id=?").get(listingId,isSeller?otherId:user.id,isSeller?user.id:otherId);
+      if(!approvedOrder)fail(403,'Only members in the approved order can message about this reserved item.');
+    }
     if (isSeller && !await db.prepare('SELECT 1 FROM messages WHERE listing_id=? AND ((sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?))').get(listingId,user.id,otherId,otherId,user.id)) fail(403, 'That conversation has not been started.');
     const rows = await db.prepare(`SELECT m.id,m.body,m.created_at,m.sender_id,u.display_name AS sender_name
       FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.listing_id=? AND
@@ -601,11 +606,18 @@ async function api(req, res, url) {
   }
   if (messageMatch && method === 'POST') {
     const user = await requireVerifiedUser(req); const body = await readBody(req); const listingId = Number(messageMatch[1]);
-    const listing = await db.prepare("SELECT * FROM listings WHERE id=? AND status='active'").get(listingId); if (!listing) fail(404, 'Listing not found.');
+    const listing = await db.prepare(`SELECT * FROM listings WHERE id=? AND (status='active' OR (status='reserved' AND EXISTS (
+      SELECT 1 FROM orders o WHERE o.listing_id=listings.id AND o.queue_status='approved' AND
+      ((o.buyer_id=? AND o.seller_id=listings.seller_id) OR (o.seller_id=? AND o.buyer_id=?)))))`).get(listingId,user.id,user.id,user.id);
+    if (!listing) fail(404, 'Listing not found or no approved order exists for it.');
     if (!listing.seller_id) fail(400, 'Messages are available for member listings.');
     const isSeller = Number(user.id) === Number(listing.seller_id);
     const receiverId = isSeller ? Number(body.recipientId) : listing.seller_id;
     if (!receiverId || receiverId === user.id) fail(400, 'Choose the other member in this conversation.');
+    if (listing.status === 'reserved') {
+      const approvedOrder=await db.prepare("SELECT 1 FROM orders WHERE listing_id=? AND queue_status='approved' AND buyer_id=? AND seller_id=?").get(listingId,isSeller?receiverId:user.id,isSeller?user.id:receiverId);
+      if(!approvedOrder)fail(403,'Only members in the approved order can message about this reserved item.');
+    }
     if (isSeller && !await db.prepare('SELECT 1 FROM messages WHERE listing_id=? AND ((sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?))').get(listingId,user.id,receiverId,receiverId,user.id)) fail(403, 'The buyer must start this conversation.');
     const content = text(body.body, 2000, 'Message');
     const result = await db.prepare('INSERT INTO messages(listing_id,sender_id,receiver_id,body,created_at) VALUES(?,?,?,?,?)').run(listing.id,user.id,receiverId,content,nowIso());
@@ -717,7 +729,7 @@ async function handler(req,res) {
       return res.end();
     }
     const publicFiles = new Map([
-      ['/','index.html'],['/index.html','index.html'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/css/design-refresh.css','assets/css/design-refresh.css'],['/assets/js/theme.js','assets/js/theme.js'],['/assets/js/landing.js','assets/js/landing.js'],['/marketplace.html','marketplace.html'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
+      ['/','index.html'],['/index.html','index.html'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/css/design-refresh.css','assets/css/design-refresh.css'],['/assets/js/theme.js','assets/js/theme.js'],['/assets/js/landing.js','assets/js/landing.js'],['/marketplace.html','marketplace.html'],['/orders.html','orders.html'],['/profile.html','profile.html'],['/assets/js/profile-page.js','assets/js/profile-page.js'],['/assets/js/orders-page.js','assets/js/orders-page.js'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
       ['/auth/','auth/index.html'],['/auth/index.html','auth/index.html'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js']
     ]);
     const asset = publicFiles.get(decodeURIComponent(url.pathname));

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f7f3">
+<title>Your profile — Goodfind</title>
+<link rel="stylesheet" href="assets/css/styles.css?v=multi-photo-3">
+<link rel="stylesheet" href="assets/css/theme.css?v=dark-9">
+<link rel="stylesheet" href="assets/css/design-refresh.css?v=profile-page-1">
+<script src="assets/js/theme.js?v=dark-4"></script>
+</head>
+<body class="profile-page-body">
+<header class="topbar">
+  <div class="shell nav">
+    <a class="logo" href="marketplace.html"><span class="logo-mark">↗</span>Goodfind</a>
+    <nav class="navlinks" aria-label="Main navigation"><a href="marketplace.html">Marketplace</a><a href="orders.html">Orders</a><a class="active" href="profile.html">My profile</a></nav>
+    <div class="navright"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme"><span aria-hidden="true">☾</span></button><a class="authnav profile-market-link" href="marketplace.html">Back to marketplace</a></div>
+  </div>
+</header>
+<main class="profile-page-shell">
+  <div class="profile-page-breadcrumb"><a href="marketplace.html">Marketplace</a><span aria-hidden="true">/</span><span>My profile</span></div>
+  <section id="profile-identity" class="profile-identity-card"><div class="profile-page-loading"><span class="profile-loading-mark" aria-hidden="true">↻</span><strong>Loading your profile</strong></div></section>
+  <section class="profile-listings-page-section">
+    <div class="profile-page-section-heading"><div><div class="eyebrow">YOUR MARKETPLACE ACTIVITY</div><h1>Your listings</h1><p>Every item you have listed, with its current availability.</p></div><a class="primary profile-add-listing" href="marketplace.html?sell=1">＋ List an item</a></div>
+    <div class="profile-listing-filters" id="profile-listing-filters" aria-label="Filter your listings" hidden></div>
+    <div id="profile-listings-grid" class="profile-all-listings"><div class="profile-page-loading"><span class="profile-loading-mark" aria-hidden="true">↻</span><strong>Loading your listings</strong></div></div>
+  </section>
+</main>
+<footer class="profile-page-footer"><a href="marketplace.html">← Back to marketplace</a><a href="orders.html?tab=listings">Manage item status and requests</a><span>Goodfind · Your community marketplace</span></footer>
+<div class="toast" id="profile-toast" role="status" aria-live="polite"></div>
+<script src="assets/js/profile-page.js?v=profile-page-1"></script>
+</body>
+</html>

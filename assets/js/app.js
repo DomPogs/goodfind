@@ -217,7 +217,7 @@ function accountPanel() {
   showModal(`<div class="modalhead"><div><div class="eyebrow">YOUR ACCOUNT</div><h2>Account settings</h2><p>Manage your profile and seller payouts.</p></div><button class="close" onclick="closeModal()">×</button></div>
     <div class="profile-summary"><div class="profile-avatar">${currentUser.profilePhoto?`<img src="${esc(currentUser.profilePhoto)}" alt="Profile photo">`:esc(currentUser.displayName.slice(0,2).toUpperCase())}</div><div class="profile-summary-copy"><strong>${esc(currentUser.displayName)}</strong><span>${esc(currentUser.email)}</span><small>${esc(currentUser.contactNo||'Add your contact number')} · ${esc(currentUser.schoolId||'Add your school ID')}</small></div><button class="filterbtn profile-edit-btn" onclick="editProfile()">Edit profile</button></div>
     <div class="id-verification-status ${esc(idStatus)}"><strong>School ID: ${esc(idStatusText)}</strong><small>${idStatus==='verified'?'Your ID number was reviewed by an admin.':idStatus==='pending'?'Your photo will be deleted after review.':idStatus==='rejected'?'Edit your profile to submit another clear photo.':'Edit your profile to submit a photo for review.'}</small></div>
-    <section class="profile-listings-section"><div class="profile-listings-heading"><div><strong>Your listings</strong><small>Your six most recent items</small></div><button type="button" class="filterbtn" onclick="openListingManager()">Manage all</button></div><div id="profile-listings-content" class="profile-listings-loading">Loading your items…</div></section>
+    <section class="profile-listings-section"><div class="profile-listings-heading"><div><strong>Your listings</strong><small>Your six most recent items</small></div><button type="button" class="filterbtn" onclick="location.href='profile.html'">View profile</button></div><div id="profile-listings-content" class="profile-listings-loading">Loading your items…</div></section>
     <div class="tradeoffer"><div class="yougive">SELLER PAYOUTS</div><p style="font-size:13px;line-height:1.6;color:#657168">${currentUser.payoutsConnected?'Your Stripe payouts account is connected.':'Connect a Stripe account to receive sale payouts.'}</p>
     ${currentUser.payoutsConnected?'':`<div class="field"><label>Two-letter payout country code</label><input id="country" maxlength="2" pattern="[A-Za-z]{2}" placeholder="e.g. US"></div><button class="filterbtn" style="width:100%" onclick="startPayoutSetup()">Set up payouts with Stripe</button>`}</div>
     <div class="account-signout"><div class="account-signout-copy"><span class="signout-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></svg></span><span><strong>Sign out</strong><small>End your Goodfind session on this device.</small></span></div><button class="signout-btn" onclick="signOut()" aria-label="Sign out of Goodfind">Sign out<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 5h8v14h-8M4 12h12m-4-4 4 4-4 4"/></svg></button></div>`);
@@ -424,7 +424,7 @@ async function requestOrder(listingId) {
   try {
     await post('/api/orders',{listingId:Number(listingId)});
     notify('Your request was added to the seller’s order queue.');
-    await openOrders('buying');
+    await openOrders('buying',true);
   } catch (error) { notify(error.message); }
 }
 
@@ -513,13 +513,11 @@ function renderOrders(data, tab=selectedOrdersTab||'buying') {
     <nav class="orders-tabs" aria-label="Order sections"><button type="button" class="orders-tab ${tab==='buying'?'active':''}" data-orders-tab="buying">Buying <b>${buying.length}</b></button><button type="button" class="orders-tab ${tab==='selling'?'active':''}" data-orders-tab="selling">Selling <b>${selling.length}</b></button><button type="button" class="orders-tab ${tab==='listings'?'active':''}" data-orders-tab="listings">My items <b>${data.myListings.length}</b></button></nav>
     <section class="orders-section orders-tab-panel">${tabContent}</section>`;
 }
-async function openOrders(tab=null) {
-  if(!currentUser){openAccount();notify('Sign in to view orders.');return;}
-  if(tab)selectedOrdersTab=tab;
-  showModal('<div class="modalhead"><div><h2>Orders &amp; transactions</h2><p>Loading your orders…</p></div><button class="close" onclick="closeModal()" aria-label="Close orders">×</button></div>');
-  $('#modal').classList.add('orders-modal');
-  try { const data=await request('/api/orders');latestOrdersData=data;if(!selectedOrdersTab)selectedOrdersTab=defaultOrdersTab(data);$('#modal').innerHTML=renderOrders(data,selectedOrdersTab);$('#modal').classList.add('orders-modal'); }
-  catch(error){$('#modal').innerHTML=`<div class="modalhead"><div><h2>Orders &amp; transactions</h2><p>${esc(error.message)}</p></div><button class="close" onclick="closeModal()" aria-label="Close orders">×</button></div>`;$('#modal').classList.add('orders-modal');}
+function openOrders(tab=null,created=false) {
+  const destination=new URL(`${appBasePath}/orders.html`,location.origin);
+  if(tab)destination.searchParams.set('tab',tab);
+  if(created)destination.searchParams.set('created','1');
+  location.href=destination.pathname+destination.search;
 }
 function openListingManager(){return openOrders('listings');}
 $('#modal').addEventListener('click',async event=>{
@@ -585,7 +583,15 @@ async function openConversation(listingId, otherId) {
     openAccount(); notify('Sign in first. Your conversation will open when you return.'); return;
   }
   if (currentUser.role!=='admin'&&currentUser.idVerificationStatus!=='verified') { accountPanel(); notify('Verify your school ID before messaging members.'); return; }
-  const item = [...extra,...listings].find(row=>Number(row.id)===Number(listingId)); if (!item) return;
+  let item = [...extra,...listings].find(row=>Number(row.id)===Number(listingId));
+  if (!item) {
+    try {
+      const {orders}=await request('/api/orders');
+      const order=orders.find(row=>Number(row.listingId)===Number(listingId)&&row.myRole==='buyer'&&row.queueStatus==='approved');
+      if(order)item={id:Number(order.listingId),title:order.itemTitle,sellerId:Number(order.sellerId),emoji:order.itemEmoji,art:order.itemArt};
+    } catch {}
+  }
+  if (!item) { notify('This item is no longer available to message about.'); return; }
   if (!item.sellerId) { notify('Sample listings are view-only.'); return; }
   try {
     const isSeller=Number(currentUser.id)===Number(item.sellerId);
@@ -630,6 +636,15 @@ async function boot() {
     }
   }
   const params=new URLSearchParams(location.search);
+  if (currentUser&&params.get('account')==='1') {
+    const cleanUrl=new URL(location.href);cleanUrl.searchParams.delete('account');history.replaceState(null,'',cleanUrl);
+    openAccount();
+  }
+  if (currentUser&&params.get('openMessage')) {
+    const listingId=Number(params.get('openMessage'));
+    const cleanUrl=new URL(location.href);cleanUrl.searchParams.delete('openMessage');history.replaceState(null,'',cleanUrl);
+    if(Number.isInteger(listingId)&&listingId>0)await openConversation(listingId);
+  }
   if (params.get('payment')==='success') notify('Payment submitted. The order updates after Stripe confirms it.');
   if (params.get('payment')==='cancel') {
     if (currentUser&&params.get('order_id')) { try { await post('/api/payments/cancel',{orderId:params.get('order_id')}); } catch {} }

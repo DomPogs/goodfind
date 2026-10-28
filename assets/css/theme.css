@@ -21,9 +21,6 @@ html[data-theme="dark"] .art-chip .chip-icon,html[data-theme="dark"] .art-float 
 html[data-theme="dark"] .step-card,html[data-theme="dark"] .authlayout,html[data-theme="dark"] .authformside,html[data-theme="dark"] .admin-login,html[data-theme="dark"] .metric-card,html[data-theme="dark"] .admin-panel{background:var(--paper)!important;border-color:var(--line)!important;color:var(--ink)}
 html[data-theme="dark"] .step-icon,html[data-theme="dark"] .step-card:nth-child(2) .step-icon,html[data-theme="dark"] .step-card:nth-child(3) .step-icon{background:#263a2b;color:var(--green)}
 html[data-theme="dark"] .landing-feature{background:#1a251d}
-html[data-theme="dark"] .feature-visual{background:linear-gradient(145deg,#263a2b,#1d3025)}
-html[data-theme="dark"] .feature-visual:before,html[data-theme="dark"] .feature-visual:after{background:#ffffff0a}
-html[data-theme="dark"] .feature-pins,html[data-theme="dark"] .feature-pins:before,html[data-theme="dark"] .feature-pins:after{border-color:#ffffff32}
 html[data-theme="dark"] .landing-cta{background:#1d4a35}
 html[data-theme="dark"] .landing-footer{border-color:var(--line);color:#aab7ad}
 html[data-theme="dark"] .footer-brand{color:var(--green)}
@@ -87,9 +84,6 @@ html[data-theme="dark"] .art-stem,html[data-theme="dark"] .art-stem:before,html[
 html[data-theme="dark"] .art-card-note,html[data-theme="dark"] .art-card-note small,html[data-theme="dark"] .art-chip,html[data-theme="dark"] .art-float{color:#e3edf2}
 html[data-theme="dark"] .art-chip .chip-icon,html[data-theme="dark"] .art-float b,html[data-theme="dark"] .step-icon,html[data-theme="dark"] .step-card:nth-child(2) .step-icon,html[data-theme="dark"] .step-card:nth-child(3) .step-icon{background:#294452;color:#a6cbd9}
 html[data-theme="dark"] .landing-feature{background:#192630}
-html[data-theme="dark"] .feature-visual{background:linear-gradient(145deg,#263e4a,#1b2d38)}
-html[data-theme="dark"] .feature-pins,html[data-theme="dark"] .feature-pins:before,html[data-theme="dark"] .feature-pins:after{border-color:#95bccc40}
-html[data-theme="dark"] .pin,html[data-theme="dark"] .pin.pin-a,html[data-theme="dark"] .pin.pin-b,html[data-theme="dark"] .pin.pin-c{background:#2b4c59;color:#e3edf2}
 html[data-theme="dark"] .landing-cta{background:#203b49}
 html[data-theme="dark"] .authstory{background:linear-gradient(145deg,#1e3541,#263943)}
 html[data-theme="dark"] .authquote{background:#19263099;border-color:#3a5260;color:#c3d1d9}

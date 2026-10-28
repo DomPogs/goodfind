@@ -23,6 +23,8 @@ const submit=document.querySelector('#submitButton');
 const notice=document.querySelector('#authnotice');
 const authForm=document.querySelector('#authForm');
 const appBasePath=new URL('../',location.href).pathname.replace(/\/$/,'');
+const initialAuthParams=new URLSearchParams(location.search);
+const requestedReturnTo=initialAuthParams.get('returnTo');
 let idPhotoData=null;
 let ocrRequest=0;
 let ocrSchoolValue='';
@@ -68,7 +70,9 @@ function setMode(mode){
   intro.textContent=signup?'Create one account to buy, sell, trade, and message members.':'Sign in to manage your listings, offers, and messages.';
   submit.textContent=signup?'Create account':'Sign in'; notice.classList.remove('show','error');
   updatePasswordFeedback();
-  history.replaceState(null,'',`?mode=${signup?'signup':'login'}`);
+  const query=new URLSearchParams({mode:signup?'signup':'login'});
+  if(requestedReturnTo)query.set('returnTo',requestedReturnTo);
+  history.replaceState(null,'',`?${query}`);
 }
 
 loginTab.addEventListener('click',()=>setMode('login'));
@@ -118,12 +122,17 @@ authForm.addEventListener('submit',async event=>{
     const response=await fetch(`${appBasePath}/api/auth/${signup?'register':'login'}`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const result=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(result.error||`Request failed (${response.status}).`);
-    location.href=`${appBasePath}/marketplace.html`;
+    location.href=safeReturnTo()||`${appBasePath}/marketplace.html`;
   }catch(error){notice.textContent=error.message||'Could not connect to Goodfind. Try again.';notice.classList.add('error');}
   finally{submit.disabled=false;}
 });
 
 setMode(new URLSearchParams(location.search).get('mode')==='signup'?'signup':'login');
+
+function safeReturnTo(){
+  if(!requestedReturnTo||!requestedReturnTo.startsWith('/')||requestedReturnTo.startsWith('//')||requestedReturnTo.includes('\\'))return'';
+  try{const target=new URL(requestedReturnTo,location.origin);return target.origin===location.origin?target.pathname+target.search+target.hash:'';}catch{return'';}
+}
 
 function compressIdPhoto(file){
   return new Promise((resolve,reject)=>{
