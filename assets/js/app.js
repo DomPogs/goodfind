@@ -42,9 +42,9 @@ function setMobileTab(tab) {
     else item.removeAttribute('aria-current');
   });
 }
-function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal','sell-modal','orders-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
-function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal','sell-modal','orders-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
-function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal','sell-modal','orders-modal','detail-modal'); }
+function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal','sell-modal','orders-modal','notification-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
+function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal','sell-modal','orders-modal','notification-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
+function closeModal() { $('#overlay').classList.remove('open','chat-open'); $('#modal').classList.remove('chat-modal','sell-modal','orders-modal','detail-modal','notification-modal'); }
 function setListings(rows) { listings.splice(0,listings.length,...rows); }
 function isOwnListing(item) { return Boolean(currentUser && item?.sellerId && Number(currentUser.id)===Number(item.sellerId)); }
 function messageReadKey(listingId,otherId) { return `goodfind-message-read:${currentUser?.id}:${listingId}:${otherId}`; }
@@ -57,12 +57,33 @@ function updateMessagesBadge(conversations) {
     if (Number(thread.lastId)>readId) unread++;
   }
   const badge=$('#messages-badge'); badge.hidden=unread===0; badge.textContent=unread>9?'9+':String(unread);
+  const navBadge=$('#messages-nav-badge');if(navBadge){navBadge.hidden=unread===0;navBadge.textContent=unread>9?'9+':String(unread);}
   const launcher=$('#messages-fab'); launcher.classList.toggle('has-unread',unread>0);
   launcher.setAttribute('aria-label',unread?`Messages, ${unread} unread conversations`:'Messages');
 }
+function updateNotificationsBadge(conversations,orders,offers) {
+  const badge=$('#notifications-badge');if(!badge)return;
+  if(!currentUser){badge.hidden=true;return;}
+  let unreadMessages=0;
+  for(const thread of conversations||[]){
+    if(Number(thread.lastSenderId)===Number(currentUser.id))continue;
+    let readId=0;try{readId=Number(localStorage.getItem(messageReadKey(thread.listingId,thread.otherId))||0);}catch{}
+    if(Number(thread.lastId)>readId)unreadMessages++;
+  }
+  const orderRequests=(orders||[]).filter(order=>order.myRole==='seller'&&order.queueStatus==='queued').length;
+  const tradeOffers=(offers||[]).filter(offer=>offer.isIncoming&&offer.status==='pending').length;
+  const idAlert=currentUser.idVerificationStatus==='rejected'?1:0;
+  const count=unreadMessages+orderRequests+tradeOffers+idAlert;
+  badge.hidden=count===0;badge.textContent=count>9?'9+':String(count);
+  $('#notificationsbtn')?.setAttribute('aria-label',count?`Notifications, ${count} items need attention`:'Notifications');
+}
 async function refreshMessagesBadge() {
   if (!currentUser) return;
-  try { const {conversations}=await request('/api/messages'); updateMessagesBadge(conversations); } catch {}
+  const results=await Promise.allSettled([request('/api/messages'),request('/api/orders'),request('/api/trades')]);
+  const conversations=results[0].status==='fulfilled'?results[0].value.conversations||[]:[];
+  const orders=results[1].status==='fulfilled'?results[1].value.orders||[]:[];
+  const offers=results[2].status==='fulfilled'?results[2].value.offers||[]:[];
+  updateMessagesBadge(conversations);updateNotificationsBadge(conversations,orders,offers);
 }
 function markConversationRead(listingId,otherId,messages) {
   const latest=messages.reduce((max,message)=>Math.max(max,Number(message.id)||0),0);
@@ -71,6 +92,7 @@ function markConversationRead(listingId,otherId,messages) {
 }
 function updateNav() {
   const avatar = $('#avatar');
+  if(!currentUser){const notificationBadge=$('#notifications-badge');if(notificationBadge){notificationBadge.hidden=true;notificationBadge.textContent='';}}
   $('#signinbtn').hidden = Boolean(currentUser);
   $('#signupbtn').hidden = Boolean(currentUser);
   avatar.hidden = !currentUser;
@@ -221,7 +243,7 @@ function openAccount() {
 function openSignup() { authPage('signup'); }
 function profileListingsMarkup(items) {
   if(!items.length)return `<div class="profile-listings-empty"><span aria-hidden="true">＋</span><strong>No items listed yet</strong><small>Your recently listed items will appear here.</small><button type="button" class="filterbtn" onclick="closeModal();openSell()">List an item</button></div>`;
-  const statusLabels={active:'Available',reserved:'Reserved',sold:'Sold',hidden:'Hidden',traded:'Traded'};
+  const statusLabels={active:'Available',pending:'Awaiting admin review',rejected:'Rejected by admin',reserved:'Reserved',sold:'Sold',hidden:'Hidden',traded:'Traded'};
   return `<div class="profile-listings-grid">${items.map(item=>`<article class="profile-listing-card"><div class="profile-listing-thumb" style="background:${esc(item.art||'var(--canvas)')}">${item.photoData?`<img src="${esc(item.photoData)}" alt="">`:`<span>${esc(item.emoji||'◇')}</span>`}</div><div class="profile-listing-info"><strong title="${esc(item.title)}">${esc(item.title)}</strong><small>${esc(item.category)} · ${price(item.price)}</small><span class="order-state order-state-${esc(item.status)}">${esc(statusLabels[item.status]||item.status)}</span></div></article>`).join('')}</div>`;
 }
 async function loadProfileListings() {
@@ -321,7 +343,7 @@ function openSell() {
         <div class="field"><label for="itemCategory">Category</label><select id="itemCategory" name="category"><option>Home & living</option><option>Art & prints</option><option>Tech</option><option>Gaming</option><option>Photography</option><option>Accessories</option><option>Digital art</option><option>Templates</option><option>Music</option><option>Other</option></select></div>
         <div class="field"><label for="itemPrice">Asking price</label><div class="sell-price-field"><span aria-hidden="true">&#8369;</span><input id="itemPrice" name="price" type="number" min="1" max="1000000" step="0.01" required placeholder="0.00"></div></div>
         <div class="field"><label id="conditionLabel" for="itemCondition">Condition</label><select id="itemCondition" name="condition"><option value="">Choose a condition</option><option>New</option><option>Like new</option><option>Good</option><option>Fair</option><option>For parts or repair</option></select></div>
-        <div class="field" id="schoolfield"><label for="itemSchool">School community</label><select id="itemSchool" name="place" required><option value="" disabled selected>Choose a school</option><option>UM Panabo College</option><option>Aces Polytechnic College</option><option>Southern Davao National High School</option></select></div>
+        <div class="field" id="schoolfield"><label for="itemSchool">School community <span aria-hidden="true">· Required</span></label><select id="itemSchool" name="place" required><option value="" disabled selected>Choose a school</option><option>UM Panabo College</option><option>Aces Polytechnic College</option><option>Southern Davao National High School</option></select></div>
         <div class="field sell-field-wide"><label for="itemDescription">Description</label><textarea id="itemDescription" name="description" required maxlength="2000" placeholder="Describe the item's condition, what's included, and any pickup or delivery details."></textarea><small class="sell-field-note">Be specific so members know what to expect.</small></div>
       </div>
     </section>
@@ -333,7 +355,7 @@ function openSell() {
       <div class="sell-section-head"><span class="sell-section-number">03</span><div><h3 id="sell-preferences-title">Selling preferences</h3><p>Choose whether you&rsquo;re open to swapping items.</p></div></div>
       <label class="sell-trade-option"><input type="checkbox" name="trade"><span class="sell-trade-icon" aria-hidden="true">&#8644;</span><span><strong>Open to trade offers</strong><small>Members can propose an item in exchange.</small></span><span class="sell-toggle-indicator" aria-hidden="true"></span></label>
     </section>
-    <div class="sell-form-footer"><button type="button" class="sell-cancel" onclick="closeModal()">Cancel</button><span class="sell-footer-note">You can edit your listing later.</span><button type="submit" class="primary sell-submit">Publish listing <span aria-hidden="true">&#8594;</span></button></div>
+    <div class="sell-form-footer"><button type="button" class="sell-cancel" onclick="closeModal()">Cancel</button><span class="sell-footer-note">Your item appears after an admin approves it.</span><button type="submit" class="primary sell-submit">Submit for review <span aria-hidden="true">&#8594;</span></button></div>
   </form>`);
   $('#modal').classList.add('sell-modal');
   const schoolField = $('#schoolfield');
@@ -362,8 +384,8 @@ function openSell() {
   document.querySelectorAll('#sellform input[name="kind"]').forEach(radio => radio.addEventListener('change', () => {
     document.querySelectorAll('#sellform .choice label').forEach(label => label.classList.toggle('selected',label.querySelector('input').checked));
     const physical = $('#sellform input[name="kind"]:checked').value === 'physical';
-    schoolField.hidden = !physical;
-    schoolField.querySelector('select').required = physical;
+    schoolField.hidden = false;
+    schoolField.querySelector('select').required = true;
     const conditionLabel = $('#conditionLabel');
     const conditionSelect = $('#itemCondition');
     conditionLabel.textContent = physical ? 'Condition' : 'Delivery';
@@ -383,7 +405,7 @@ function openSell() {
       $('#itemPhoto').disabled=true;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=true);
       if(selectedPhotos.length){draft.photosData=[];for(let index=0;index<selectedPhotos.length;index++){submitButton.textContent=`Processing photo ${index+1} of ${selectedPhotos.length}…`;draft.photosData.push(await compressPhoto(selectedPhotos[index].file));}}
       submitButton.textContent='Publishing listing…';
-      const result = await post('/api/listings',draft); listings.unshift(result.listing); closeModal(); active='all'; selectTab('all'); render(); notify('Your listing is live.');
+      await post('/api/listings',draft); closeModal(); notify('Listing submitted for admin review. It will appear after approval.');
     } catch (error) { notify(error.message);submitButton.disabled=false;submitButton.classList.remove('is-loading');submitButton.removeAttribute('aria-busy');submitButton.textContent='Publish listing';$('#itemPhoto').disabled=false;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=false); }
   };
 }
@@ -508,7 +530,7 @@ function renderOrderCard(order) {
   return `<article class="order-card"><div class="order-card-main"><div class="order-item-thumb">${order.itemPhoto?`<img src="${esc(order.itemPhoto)}" alt="">`:`<span>${esc(order.itemEmoji||'◇')}</span>`}</div><div class="order-card-copy"><div class="order-card-meta"><span>Order #${order.id} · ${isSeller?'Buyer':'Seller'}: ${esc(order.otherName)}</span><span class="order-state order-state-${esc(order.queueStatus)}">${esc(orderStateLabel(order))}</span></div><h4>${esc(order.itemTitle)}</h4><p>${price(order.amount)}</p><small>${esc(orderDate(order.date))}</small></div></div>${orderProgressMarkup(order)}${guidance?`<div class="order-guidance">${esc(guidance)}</div>`:''}${actions?`<div class="order-card-actions">${actions}</div>`:''}${reviews?`<div class="order-review-list">${reviews}</div>`:''}</article>`;
 }
 function renderListingStatusCard(listing) {
-  const labels={active:'Available',reserved:'Reserved',sold:'Sold',hidden:'Hidden by admin',traded:'Traded'};
+  const labels={active:'Available',pending:'Waiting for admin review',rejected:'Rejected by admin',reserved:'Reserved',sold:'Sold',hidden:'Hidden by admin',traded:'Traded'};
   let controls='';
   if(listing.status==='active')controls=`<button type="button" class="filterbtn" data-listing-status="reserved" data-listing-id="${listing.id}">Mark reserved</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
   else if(listing.status==='reserved'&&listing.approvedCount>0)controls='<span class="order-wait-note">Reserved for an approved order.</span>';
@@ -546,6 +568,15 @@ function openOrders(tab=null,created=false) {
 }
 function openListingManager(){return openOrders('listings');}
 $('#modal').addEventListener('click',async event=>{
+  const notification=event.target.closest('[data-notification-action]');
+  if(notification){
+    const action=notification.dataset.notificationAction;
+    if(action==='message'){closeModal();await openConversation(Number(notification.dataset.listingId),Number(notification.dataset.otherId));}
+    else if(action==='orders')openOrders(notification.dataset.ordersTab||'selling');
+    else if(action==='offers'){closeModal();await openOffers();}
+    else if(action==='verification'){closeModal();accountPanel();}
+    return;
+  }
   const tabButton=event.target.closest('[data-orders-tab]');
   if(tabButton&&latestOrdersData){selectedOrdersTab=tabButton.dataset.ordersTab;$('#modal').innerHTML=renderOrders(latestOrdersData,selectedOrdersTab);$('#modal').classList.add('orders-modal');return;}
   const messageButton=event.target.closest('[data-order-message]');
@@ -603,6 +634,46 @@ async function openMessages() {
     $('#modal').append(inboxList);
   } catch (error) { notify(error.message); }
 }
+function notificationTime(value) {
+  const date=new Date(value);
+  return Number.isNaN(date.getTime())?'':date.toLocaleString('en-PH',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function buildNotifications(conversations,orders,offers) {
+  const items=[];
+  for(const thread of conversations||[]){
+    if(Number(thread.lastSenderId)===Number(currentUser.id))continue;
+    let readId=0;try{readId=Number(localStorage.getItem(messageReadKey(thread.listingId,thread.otherId))||0);}catch{}
+    if(Number(thread.lastId)<=readId)continue;
+    items.push({type:'message',title:`New message from ${thread.otherName}`,detail:`${thread.title} · Open conversation`,date:thread.lastAt,listingId:Number(thread.listingId),otherId:Number(thread.otherId),icon:'&#9993;'});
+  }
+  for(const order of orders||[]){
+    if(order.myRole==='seller'&&order.queueStatus==='queued')items.push({type:'orders',title:'New order request',detail:`${order.otherName} requested ${order.itemTitle}`,date:order.date,tab:'selling',icon:'&#9638;'});
+  }
+  for(const offer of offers||[]){
+    if(offer.isIncoming&&offer.status==='pending')items.push({type:'offers',title:'Trade offer waiting for you',detail:`${offer.offeredTitle} for ${offer.requestedTitle} · From ${offer.sender}`,date:offer.createdAt,icon:'&#8644;'});
+  }
+  if(currentUser.idVerificationStatus==='rejected')items.push({type:'verification',title:'School ID needs attention',detail:'Upload a clearer photo to submit it for review again.',date:currentUser.createdAt,icon:'&#9888;'});
+  return items.sort((a,b)=>(new Date(b.date||0).getTime()||0)-(new Date(a.date||0).getTime()||0));
+}
+function renderNotifications(items) {
+  const body=items.length?`<div class="notification-list">${items.map(item=>`<button type="button" class="notification-item" data-notification-action="${item.type}"${item.listingId?` data-listing-id="${item.listingId}" data-other-id="${item.otherId}"`:''}${item.tab?` data-orders-tab="${item.tab}"`:''}><span class="notification-icon notification-icon-${item.type}" aria-hidden="true">${item.icon}</span><span class="notification-copy"><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small><time>${esc(notificationTime(item.date))}</time></span><span class="notification-arrow" aria-hidden="true">&#8250;</span></button>`).join('')}</div>`:'<div class="notification-empty"><span aria-hidden="true">&#10003;</span><strong>You’re all caught up</strong><small>New messages, order requests, and trade offers will show up here.</small></div>';
+  $('#modal').innerHTML=`<div class="modalhead"><div><div class="eyebrow">YOUR ACTIVITY</div><h2>Notifications</h2><p>Messages and requests that need your attention.</p></div><button class="close" type="button" onclick="closeModal()" aria-label="Close notifications">&#215;</button></div>${body}`;
+  $('#modal').classList.add('notification-modal');
+}
+async function openNotifications() {
+  if(!currentUser){openAccount();notify('Sign in to view notifications.');return;}
+  showModal('<div class="modalhead"><div><div class="eyebrow">YOUR ACTIVITY</div><h2>Notifications</h2><p>Loading your recent activity…</p></div><button class="close" type="button" onclick="closeModal()" aria-label="Close notifications">&#215;</button></div><div class="notification-loading"><span></span>Checking messages and requests…</div>');
+  $('#modal').classList.add('notification-modal');
+  try{
+    const [messageData,orderData,tradeData]=await Promise.all([request('/api/messages'),request('/api/orders'),request('/api/trades')]);
+    updateMessagesBadge(messageData.conversations||[]);
+    updateNotificationsBadge(messageData.conversations||[],orderData.orders||[],tradeData.offers||[]);
+    renderNotifications(buildNotifications(messageData.conversations||[],orderData.orders||[],tradeData.offers||[]));
+  }catch(error){
+    $('#modal').innerHTML=`<div class="modalhead"><div><div class="eyebrow">YOUR ACTIVITY</div><h2>Notifications</h2><p>${esc(error.message)}</p></div><button class="close" type="button" onclick="closeModal()" aria-label="Close notifications">&#215;</button></div><div class="notification-empty"><strong>Could not load notifications</strong><button class="filterbtn" type="button" onclick="openNotifications()">Try again</button></div>`;
+    $('#modal').classList.add('notification-modal');
+  }
+}
 async function openConversation(listingId, otherId) {
   if (!currentUser) {
     try { sessionStorage.setItem('goodfind_pending_conversation',JSON.stringify({listingId:Number(listingId),otherId:otherId==null?null:Number(otherId)})); } catch {}
@@ -613,7 +684,7 @@ async function openConversation(listingId, otherId) {
   if (!item) {
     try {
       const {orders}=await request('/api/orders');
-      const order=orders.find(row=>Number(row.listingId)===Number(listingId)&&row.myRole==='buyer'&&row.queueStatus==='approved');
+      const order=orders.find(row=>Number(row.listingId)===Number(listingId)&&['buyer','seller'].includes(row.myRole)&&row.queueStatus==='approved');
       if(order)item={id:Number(order.listingId),title:order.itemTitle,sellerId:Number(order.sellerId),emoji:order.itemEmoji,art:order.itemArt};
     } catch {}
   }

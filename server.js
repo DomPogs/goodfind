@@ -260,10 +260,11 @@ async function api(req, res, url) {
       members:Number((await db.prepare('SELECT COUNT(*) AS n FROM users').get()).n),
       activeListings:Number((await db.prepare("SELECT COUNT(*) AS n FROM listings WHERE status='active'").get()).n),
       hiddenListings:Number((await db.prepare("SELECT COUNT(*) AS n FROM listings WHERE status='hidden'").get()).n),
+      pendingListings:Number((await db.prepare("SELECT COUNT(*) AS n FROM listings WHERE status='pending'").get()).n),
       orders:Number((await db.prepare('SELECT COUNT(*) AS n FROM orders').get()).n)
     };
     counts.pendingVerifications=Number((await db.prepare("SELECT COUNT(*) AS n FROM users WHERE id_verification_status='pending'").get()).n);
-    const rows = await db.prepare("SELECT l.*,c.category_name FROM listings l LEFT JOIN categories c USING(category_id) WHERE l.status IN ('active','hidden') ORDER BY l.created_at DESC LIMIT 100").all();
+    const rows = await db.prepare("SELECT l.*,c.category_name FROM listings l LEFT JOIN categories c USING(category_id) WHERE l.status IN ('pending','active','hidden','rejected','reserved','sold','traded') ORDER BY CASE WHEN l.status='pending' THEN 0 ELSE 1 END,l.created_at DESC LIMIT 200").all();
     return send(res, 200, { counts, listings:rows.map(publicListing) });
   }
   if (method === 'GET' && route === '/api/admin/verifications') {
@@ -285,9 +286,11 @@ async function api(req, res, url) {
   if (method === 'PATCH' && /^\/api\/admin\/listings\/\d+$/.test(route)) {
     await requireAdmin(req);
     const id = Number(route.split('/').pop()); const body = await readBody(req);
-    if (!['active','hidden'].includes(body.status)) fail(400, 'Choose active or hidden.');
-    const result = await db.prepare("UPDATE listings SET status=? WHERE id=? AND status IN ('active','hidden')").run(body.status,id);
-    if (!result.changes) fail(404, 'Moderatable listing not found.');
+    const transitions={active:['pending','hidden'],hidden:['active'],rejected:['pending']};
+    if (!Object.hasOwn(transitions,body.status)) fail(400, 'Choose approve, reject, hide, or restore.');
+    const allowedFrom=transitions[body.status];
+    const result = await db.prepare(`UPDATE listings SET status=? WHERE id=? AND status IN (${allowedFrom.map(()=>'?').join(',')})`).run(body.status,id,...allowedFrom);
+    if (!result.changes) fail(404, 'Listing review action is no longer available.');
     return send(res, 200, { id,status:body.status });
   }
   if (method === 'GET' && route === '/api/listings') {
@@ -417,6 +420,8 @@ async function api(req, res, url) {
   if (method === 'POST' && route === '/api/listings') {
     const user = await requireVerifiedUser(req); const body = await readBody(req);
     const title = text(body.title, 100, 'Title'); const description = text(body.description, 2000, 'Description', 5);
+    const place=text(body.place,80,'School community');
+    if(!['UM Panabo College','Aces Polytechnic College','Southern Davao National High School'].includes(place))fail(400,'Choose a school community for this listing.');
     const price = Number(body.price); if (!Number.isFinite(price) || price < 1 || price > 1000000) fail(400, 'Price must be between PHP 1 and PHP 1,000,000.');
     const validatePhoto = value => {
       if (typeof value !== 'string' || value.length > 1500000) fail(400, 'Each photo must be a JPG image no larger than 1 MB after processing.');
@@ -436,18 +441,18 @@ async function api(req, res, url) {
     const category = text(body.category, 60, 'Category');
     const categoryId = await ensureCategory(category);
     const condition = kind === 'digital' ? text(body.condition || 'Instant download', 40, 'Delivery type') : text(body.condition || 'Good', 40, 'Condition');
-    const place = kind === 'digital' ? 'Digital delivery' : text(body.place || 'Local pickup or shipping', 80, 'Location');
+    
     const palette = kind === 'digital' ? 'linear-gradient(140deg,#d6d0f1,#a9a0dc)' : 'linear-gradient(140deg,#d4e4ce,#a8c6a4)';
     const result = await db.transaction(async()=>{
-      const inserted=await db.prepare(`INSERT INTO listings(seller_id,title,seller_name,initial,price_cents,kind,category_id,category,\`condition\`,place,emoji,art,photo_data,note,open_to_trade,description,created_at)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(user.id,title,user.display_name,user.display_name.slice(0,1).toUpperCase(),Math.round(price*100),kind,categoryId,category,condition,place,kind==='digital'?'💾':'✨',palette,photoData,'JUST LISTED',body.trade?1:0,description,nowIso());
+      const inserted=await db.prepare(`INSERT INTO listings(seller_id,title,seller_name,initial,price_cents,kind,category_id,category,\`condition\`,place,emoji,art,photo_data,note,open_to_trade,description,status,created_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?)`).run(user.id,title,user.display_name,user.display_name.slice(0,1).toUpperCase(),Math.round(price*100),kind,categoryId,category,condition,place,kind==='digital'?'💾':'✨',palette,photoData,'AWAITING REVIEW',body.trade?1:0,description,nowIso());
       const listingId=Number(inserted.lastInsertRowid);
       await db.prepare('UPDATE listings SET verified=? WHERE id=?').run(user.id_verification_status==='verified'?1:0,listingId);
       for(let index=1;index<photosData.length;index++)await db.prepare('INSERT INTO listing_photos(listing_id,photo_order,photo_data) VALUES(?,?,?)').run(listingId,index+1,photosData[index]);
       return inserted;
     });
     const listingId=Number(result.lastInsertRowid);
-    return send(res, 201, { listing:publicListing(await db.prepare('SELECT * FROM listings WHERE id=?').get(listingId),true,photosData) });
+    return send(res, 201, { listing:publicListing(await db.prepare('SELECT * FROM listings WHERE id=?').get(listingId),true,photosData),reviewRequired:true });
   }
 
   const listingStatusMatch=route.match(/^\/api\/listings\/(\d+)\/status$/);
@@ -729,7 +734,7 @@ async function handler(req,res) {
       return res.end();
     }
     const publicFiles = new Map([
-      ['/','index.html'],['/index.html','index.html'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/css/design-refresh.css','assets/css/design-refresh.css'],['/assets/js/theme.js','assets/js/theme.js'],['/assets/js/landing.js','assets/js/landing.js'],['/marketplace.html','marketplace.html'],['/orders.html','orders.html'],['/profile.html','profile.html'],['/assets/js/profile-page.js','assets/js/profile-page.js'],['/assets/js/orders-page.js','assets/js/orders-page.js'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
+      ['/','index.html'],['/index.html','index.html'],['/assets/favicon.png','assets/favicon.png'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/css/design-refresh.css','assets/css/design-refresh.css'],['/assets/js/theme.js','assets/js/theme.js'],['/assets/js/landing.js','assets/js/landing.js'],['/marketplace.html','marketplace.html'],['/orders.html','orders.html'],['/profile.html','profile.html'],['/assets/js/profile-page.js','assets/js/profile-page.js'],['/assets/js/orders-page.js','assets/js/orders-page.js'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
       ['/auth/','auth/index.html'],['/auth/index.html','auth/index.html'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js']
     ]);
     const asset = publicFiles.get(decodeURIComponent(url.pathname));
@@ -751,7 +756,7 @@ async function adminHandler(req,res){
   try{
     if(req.method!=='GET'&&req.method!=='HEAD')return send(res,405,{error:'Method not allowed.'});
     const route=new URL(req.url,'http://localhost').pathname;
-    const files=new Map([['/','live.html'],['/index.html','live.html'],['/admin.css','live.css'],['/admin.js','live.js'],['/assets/css/styles.css',path.join(ROOT,'assets/css/styles.css')],['/assets/css/theme.css',path.join(ROOT,'assets/css/theme.css')],['/assets/css/design-refresh.css',path.join(ROOT,'assets/css/design-refresh.css')],['/assets/js/theme.js',path.join(ROOT,'assets/js/theme.js')]]);
+    const files=new Map([['/','live.html'],['/index.html','live.html'],['/admin.css','live.css'],['/admin.js','live.js'],['/assets/favicon.png',path.join(ROOT,'assets/favicon.png')],['/assets/css/styles.css',path.join(ROOT,'assets/css/styles.css')],['/assets/css/theme.css',path.join(ROOT,'assets/css/theme.css')],['/assets/css/design-refresh.css',path.join(ROOT,'assets/css/design-refresh.css')],['/assets/js/theme.js',path.join(ROOT,'assets/js/theme.js')]]);
     const asset=files.get(decodeURIComponent(route));
     if(!asset)return send(res,404,{error:'Not found.'});
     const filePath=path.isAbsolute(asset)?asset:path.join(ADMIN_ROOT,asset);

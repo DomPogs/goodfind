@@ -75,7 +75,7 @@ function renderOrder(order) {
 }
 
 function renderListing(listing) {
-  const labels = {active:'Available', reserved:'Reserved', sold:'Sold', hidden:'Hidden by admin', traded:'Traded'};
+  const labels = {active:'Available', pending:'Awaiting admin review', rejected:'Rejected by admin', reserved:'Reserved', sold:'Sold', hidden:'Hidden by admin', traded:'Traded'};
   let controls = '';
   if (listing.status === 'active') controls = `<button type="button" class="filterbtn" data-listing-status="reserved" data-listing-id="${listing.id}">Mark reserved</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
   else if (listing.status === 'reserved' && listing.approvedCount > 0) controls = '<span class="order-wait-note">Reserved for an approved order.</span>';

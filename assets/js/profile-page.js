@@ -10,7 +10,7 @@ let activeFilter = 'all';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const formatPrice = value => `₱${Number(value || 0).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-const statusNames = {active:'Available', reserved:'Reserved', sold:'Sold', hidden:'Hidden', traded:'Traded'};
+const statusNames = {active:'Available', pending:'Awaiting admin review', rejected:'Rejected by admin', reserved:'Reserved', sold:'Sold', hidden:'Hidden', traded:'Traded'};
 
 async function getJson(path) {
   const response = await fetch(`${profileBasePath}${path}`, {credentials:'same-origin'});
@@ -55,7 +55,7 @@ function renderListings() {
   const counts = {all:profileListings.length};
   for (const item of profileListings) counts[item.status] = (counts[item.status] || 0) + 1;
   const filters = [
-    ['all','All items'], ['active','Available'], ['reserved','Reserved'], ['sold','Sold'], ['hidden','Hidden'], ['traded','Traded']
+    ['all','All items'], ['pending','Awaiting review'], ['active','Available'], ['reserved','Reserved'], ['sold','Sold'], ['hidden','Hidden'], ['rejected','Rejected'], ['traded','Traded']
   ].filter(([key]) => key === 'all' || counts[key]);
   filtersHost.hidden = profileListings.length === 0;
   filtersHost.innerHTML = filters.map(([key,label]) => `<button type="button" class="profile-listing-filter ${activeFilter === key ? 'active' : ''}" data-profile-filter="${key}" aria-pressed="${activeFilter === key}">${label}<span>${counts[key] || 0}</span></button>`).join('');
