@@ -3,6 +3,8 @@
 let active = 'all';
 let currentUser = null;
 let apiOnline = false;
+let listingsLoading = true;
+let listingsLoadError = false;
 let extra = [];
 const $ = selector => document.querySelector(selector);
 const appBasePath = new URL('.', location.href).pathname.replace(/\/$/,'');
@@ -31,6 +33,14 @@ const patch = (url, body) => request(url,{method:'PATCH',body:JSON.stringify(bod
 function notify(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('show');
   clearTimeout(window._toast); window._toast = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+function setMobileTab(tab) {
+  document.querySelectorAll('[data-mobile-tab]').forEach(item=>{
+    const active=item.dataset.mobileTab===tab;
+    item.classList.toggle('active',active);
+    if(active&&item.tagName==='A')item.setAttribute('aria-current','page');
+    else item.removeAttribute('aria-current');
+  });
 }
 function showModal(html) { $('#modal').classList.remove('chat-modal','detail-modal','sell-modal','orders-modal'); $('#overlay').classList.remove('chat-open'); $('#modal').innerHTML = html; $('#overlay').classList.add('open'); }
 function showChat(html) { $('#modal').innerHTML = html; $('#modal').classList.remove('detail-modal','sell-modal','orders-modal'); $('#modal').classList.add('chat-modal'); $('#overlay').classList.add('open','chat-open'); }
@@ -74,6 +84,18 @@ function updateNav() {
 }
 
 function render() {
+  if (listingsLoading) {
+    $('#resultcount').textContent='Finding the latest listings…';
+    $('#grid').innerHTML=Array.from({length:8},()=>'<article class="listing-skeleton" aria-hidden="true"><div class="skeleton-block skeleton-image"></div><div class="skeleton-copy"><i class="skeleton-block skeleton-line skeleton-short"></i><i class="skeleton-block skeleton-line"></i><i class="skeleton-block skeleton-line skeleton-medium"></i><i class="skeleton-block skeleton-button"></i></div></article>').join('');
+    $('#grid').setAttribute('aria-busy','true');
+    return;
+  }
+  $('#grid').removeAttribute('aria-busy');
+  if(listingsLoadError){
+    $('#resultcount').textContent='Marketplace connection unavailable';
+    $('#grid').innerHTML='<div class="empty marketplace-load-error"><strong>Listings could not be loaded</strong><span>Check your connection and try again.</span><button class="filterbtn" type="button" onclick="location.reload()">Try again</button></div>';
+    return;
+  }
   const query = $('#search').value.trim().toLowerCase();
   const tradeOnly = $('#tradeonly').checked;
   const location = $('#locationfilter').value;
@@ -88,7 +110,7 @@ function render() {
   lastShownListings=shown;
   $('#heading').textContent = active === 'all' ? 'Picked for you' : active === 'trade' ? 'Open to trade' : active === 'new' ? 'Recently added' : active === 'physical' ? 'Physical goods' : 'Digital goods';
   $('#resultcount').textContent = `${shown.length} ${shown.length === 1 ? 'find' : 'finds'} ready for a new home`;
-  $('#grid').innerHTML = shown.length ? shown.map(item => `<article class="card">
+  $('#grid').innerHTML = shown.length ? shown.map(item => `<article class="card" data-item-card="${Number(item.id)}" tabindex="0" role="group" aria-label="${esc(item.title)}. Press Enter to view details.">
     <div class="art" style="background:${esc(item.art)}">
       <span class="badge"><span>${item.kind === 'physical' ? 'Physical' : 'Digital'}</span><span class="badge-divider" aria-hidden="true">&#183;</span><span class="badge-category">${esc(item.category)}</span></span>
       <button class="heart" aria-label="Save ${esc(item.title)}" onclick="saveItem(this)">&#9825;</button>
@@ -254,7 +276,7 @@ function editProfile() {
   $('#profileform').onsubmit=async event=>{
     event.preventDefault();const form=new FormData(event.currentTarget);const button=$('#saveProfile');button.disabled=true;button.textContent='Saving…';
     try { const result=await patch('/api/auth/profile',{displayName:form.get('displayName'),schoolId:form.get('schoolId'),contactNo:form.get('contactNo'),profilePhoto:profilePhotoDraft,idPhoto:schoolIdPhotoDraft});currentUser=result.user;updateNav();accountPanel();notify('Profile updated successfully.'); }
-    catch(error){notify(error.message);button.disabled=false;button.textContent='Save changes';}
+    catch(error){notify(error.message);button.disabled=false;button.classList.remove('is-loading');button.removeAttribute('aria-busy');button.textContent='Save changes';}
   };
 }
 async function startPayoutSetup() {
@@ -281,6 +303,7 @@ async function moderateListing(id,status) {
 }
 
 function openSell() {
+  setMobileTab('add');
   if (!currentUser) { openAccount(); notify('Sign in to publish a listing.'); return; }
   if (currentUser.role!=='admin'&&currentUser.idVerificationStatus!=='verified') { accountPanel(); notify('Verify your school ID before listing an item.'); return; }
   showModal(`<div class="sell-head">
@@ -355,11 +378,13 @@ function openSell() {
     const submitButton=event.currentTarget.querySelector('button[type="submit"]');
     try {
       submitButton.disabled=true;
+      submitButton.classList.add('is-loading');
+      submitButton.setAttribute('aria-busy','true');
       $('#itemPhoto').disabled=true;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=true);
       if(selectedPhotos.length){draft.photosData=[];for(let index=0;index<selectedPhotos.length;index++){submitButton.textContent=`Processing photo ${index+1} of ${selectedPhotos.length}…`;draft.photosData.push(await compressPhoto(selectedPhotos[index].file));}}
       submitButton.textContent='Publishing listing…';
       const result = await post('/api/listings',draft); listings.unshift(result.listing); closeModal(); active='all'; selectTab('all'); render(); notify('Your listing is live.');
-    } catch (error) { notify(error.message);submitButton.disabled=false;submitButton.textContent='Publish listing';$('#itemPhoto').disabled=false;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=false); }
+    } catch (error) { notify(error.message);submitButton.disabled=false;submitButton.classList.remove('is-loading');submitButton.removeAttribute('aria-busy');submitButton.textContent='Publish listing';$('#itemPhoto').disabled=false;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=false); }
   };
 }
 function compressPhoto(file) {
@@ -528,26 +553,27 @@ $('#modal').addEventListener('click',async event=>{
   const orderButton=event.target.closest('[data-order-action]');
   if(orderButton){
     const action=orderButton.dataset.orderAction,id=Number(orderButton.dataset.orderId);orderButton.disabled=true;
+    orderButton.classList.add('is-loading');orderButton.setAttribute('aria-busy','true');
     try{
       if(action==='pay'){const result=await post('/api/payments/checkout',{orderId:id});location.href=result.url;return;}
       await patch(`/api/orders/${id}`,{action});
       notify(action==='approved'?'Order approved. The item is now reserved.':action==='completed'?'Exchange completed. The item is marked sold.':'Order updated.');
       await openOrders();
-    }catch(error){notify(error.message);orderButton.disabled=false;}
+    }catch(error){notify(error.message);orderButton.disabled=false;orderButton.classList.remove('is-loading');orderButton.removeAttribute('aria-busy');}
     return;
   }
   const listingButton=event.target.closest('[data-listing-status]');
   if(listingButton){
-    listingButton.disabled=true;
+    listingButton.disabled=true;listingButton.classList.add('is-loading');listingButton.setAttribute('aria-busy','true');
     try{await patch(`/api/listings/${Number(listingButton.dataset.listingId)}/status`,{status:listingButton.dataset.listingStatus});notify('Listing status updated.');await openOrders();}
-    catch(error){notify(error.message);listingButton.disabled=false;}
+    catch(error){notify(error.message);listingButton.disabled=false;listingButton.classList.remove('is-loading');listingButton.removeAttribute('aria-busy');}
   }
 });
 $('#modal').addEventListener('submit',async event=>{
   const form=event.target.closest('.order-review-form');if(!form)return;event.preventDefault();
-  const submit=form.querySelector('[type="submit"]');submit.disabled=true;
+  const submit=form.querySelector('[type="submit"]');submit.disabled=true;submit.classList.add('is-loading');submit.setAttribute('aria-busy','true');
   try{const values=new FormData(form);await post(`/api/orders/${Number(form.dataset.reviewOrder)}/reviews`,{rating:Number(values.get('rating')),remarks:values.get('remarks')});notify('Your review was submitted.');await openOrders();}
-  catch(error){notify(error.message);submit.disabled=false;}
+  catch(error){notify(error.message);submit.disabled=false;submit.classList.remove('is-loading');submit.removeAttribute('aria-busy');}
 });
 async function openOffers() {
   if (!currentUser) { openAccount(); notify('Sign in to view trade offers.'); return; }
@@ -616,17 +642,26 @@ async function openConversation(listingId, otherId) {
 
 function toggleFilters() { const panel=$('#filterpanel'); panel.style.display=panel.style.display==='flex'?'none':'flex'; }
 $('#tabs').addEventListener('click',event=>{const button=event.target.closest('.tab');if(!button)return;selectTab(button.dataset.kind);render();});
+$('#grid').addEventListener('click',event=>{
+  if(event.target.closest('button,a,input,select,textarea,label'))return;
+  const card=event.target.closest('[data-item-card]');
+  if(card)openDetail(Number(card.dataset.itemCard));
+});
+$('#grid').addEventListener('keydown',event=>{
+  if(!['Enter',' '].includes(event.key)||!event.target.matches('[data-item-card]'))return;
+  event.preventDefault();openDetail(Number(event.target.dataset.itemCard));
+});
 document.querySelectorAll('.navlinks [data-kind]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();document.querySelector(`#tabs [data-kind="${link.dataset.kind}"]`).click();$('#discover').scrollIntoView({behavior:'smooth'});}));
 document.querySelector('.navlinks a[href="#discover"]:not([data-kind])').addEventListener('click',event=>{event.preventDefault();selectTab('all');render();$('#discover').scrollIntoView({behavior:'smooth'});});
-$('#search').addEventListener('input',render); $('#tradeonly').addEventListener('change',render); $('#locationfilter').addEventListener('change',render); $('#sortby').addEventListener('change',render);
+$('#search').addEventListener('input',render); $('#search').addEventListener('focus',()=>setMobileTab('search')); $('#tradeonly').addEventListener('change',render); $('#locationfilter').addEventListener('change',render); $('#sortby').addEventListener('change',render);
 document.addEventListener('keydown',event=>{if(event.key==='/'&&document.activeElement.tagName!=='INPUT'){event.preventDefault();$('#search').focus();}if(event.key==='Escape')closeModal();});
 
 async function boot() {
   try {
     await request('/api/health'); apiOnline=true;
     const [account,market] = await Promise.all([request('/api/auth/me'),request('/api/listings')]);
-    currentUser=account.user; setListings(market.listings); updateNav(); render(); await refreshMessagesBadge();
-  } catch { apiOnline=false; updateNav(); }
+    currentUser=account.user; setListings(market.listings); listingsLoading=false; updateNav(); render(); await refreshMessagesBadge();
+  } catch { apiOnline=false;listingsLoading=false;listingsLoadError=true;updateNav();render(); }
   if (currentUser) {
     const pending=sessionStorage.getItem('goodfind_pending_conversation');
     if (pending) {
@@ -636,6 +671,10 @@ async function boot() {
     }
   }
   const params=new URLSearchParams(location.search);
+  if(params.get('focus')==='search'){
+    setMobileTab('search');
+    requestAnimationFrame(()=>$('#search').focus({preventScroll:true}));
+  }
   if (currentUser&&params.get('account')==='1') {
     const cleanUrl=new URL(location.href);cleanUrl.searchParams.delete('account');history.replaceState(null,'',cleanUrl);
     openAccount();

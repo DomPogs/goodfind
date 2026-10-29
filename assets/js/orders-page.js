@@ -147,6 +147,8 @@ ordersRoot.addEventListener('click', async event => {
   if (orderButton) {
     const action = orderButton.dataset.orderAction;
     orderButton.disabled = true;
+    orderButton.classList.add('is-loading');
+    orderButton.setAttribute('aria-busy','true');
     try {
       if (action === 'pay') {
         const result = await send('/api/payments/checkout', {orderId:Number(orderButton.dataset.orderId)});
@@ -156,17 +158,19 @@ ordersRoot.addEventListener('click', async event => {
       await update(`/api/orders/${Number(orderButton.dataset.orderId)}`, {action});
       showToast(action === 'approved' ? 'Order approved. The item is now reserved.' : action === 'completed' ? 'Exchange completed. The item is marked sold.' : 'Order updated.');
       await loadOrders();
-    } catch (error) { showToast(error.message); orderButton.disabled = false; }
+    } catch (error) { showToast(error.message); orderButton.disabled = false; orderButton.classList.remove('is-loading'); orderButton.removeAttribute('aria-busy'); }
     return;
   }
   const listingButton = event.target.closest('[data-listing-status]');
   if (listingButton) {
     listingButton.disabled = true;
+    listingButton.classList.add('is-loading');
+    listingButton.setAttribute('aria-busy','true');
     try {
       await update(`/api/listings/${Number(listingButton.dataset.listingId)}/status`, {status:listingButton.dataset.listingStatus});
       showToast('Listing status updated.');
       await loadOrders();
-    } catch (error) { showToast(error.message); listingButton.disabled = false; }
+    } catch (error) { showToast(error.message); listingButton.disabled = false; listingButton.classList.remove('is-loading'); listingButton.removeAttribute('aria-busy'); }
   }
 });
 
@@ -176,12 +180,14 @@ ordersRoot.addEventListener('submit', async event => {
   event.preventDefault();
   const submitButton = form.querySelector('[type="submit"]');
   submitButton.disabled = true;
+  submitButton.classList.add('is-loading');
+  submitButton.setAttribute('aria-busy','true');
   try {
     const values = new FormData(form);
     await send(`/api/orders/${Number(form.dataset.reviewOrder)}/reviews`, {rating:Number(values.get('rating')), remarks:values.get('remarks')});
     showToast('Your review was submitted.');
     await loadOrders();
-  } catch (error) { showToast(error.message); submitButton.disabled = false; }
+  } catch (error) { showToast(error.message); submitButton.disabled = false; submitButton.classList.remove('is-loading'); submitButton.removeAttribute('aria-busy'); }
 });
 
 async function bootOrders() {

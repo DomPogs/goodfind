@@ -8,7 +8,7 @@
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
  <link rel="stylesheet" href="assets/css/styles.css?v=multi-photo-3">
  <link rel="stylesheet" href="assets/css/theme.css?v=dark-9">
- <link rel="stylesheet" href="assets/css/design-refresh.css?v=profile-page-1">
+ <link rel="stylesheet" href="assets/css/design-refresh.css?v=navbar-1">
  <script src="assets/js/theme.js?v=dark-4"></script>
 </head>
 <body>
@@ -21,9 +21,16 @@
  <section><div class="section-head"><div><h2 id="heading">Picked for you</h2><p id="resultcount">12 thoughtful finds, ready for a new home</p></div><div class="listing-tools"><button id="maptoggle" class="map-toggle" type="button" onclick="toggleMapView()" aria-pressed="false">Show map</button><label class="sortcontrol">Sort by <select id="sortby" aria-label="Sort listings"><option value="recent">Recently listed</option><option value="low">Price: cheapest first</option><option value="high">Price: most expensive first</option></select></label></div></div><div id="mapview" class="map-view" hidden><div class="map-toolbar"><div class="map-title"><strong>Panabo City</strong><small id="location-status">Showing the city area and nearby school pickup points.</small></div><div class="map-actions"><button type="button" class="map-control" onclick="showPanaboCity()">Whole city</button><button type="button" id="locate-button" class="map-control map-control-primary" onclick="toggleLiveLocation()">Use my location</button></div></div><div id="listings-map" class="listings-map" role="application" aria-label="Map of Panabo City and approximate listing pickup locations"></div><p class="map-note">Listing pins show approximate school pickup areas. Live location is shown only while enabled and is not saved to your Goodfind account.</p></div><div class="grid" id="grid"></div></section>
  <aside class="trust" id="trust"><div class="trusticon">♧</div><div><strong>Good trades start with trust.</strong><p>Every listing comes from a real community member. Trade details stay between you and the other person.</p></div><div class="trustitems"><span><b>✓</b> Member ratings</span><span><b>✓</b> Clear trade terms</span><span><b>✓</b> Secure checkout soon</span></div></aside>
 </main>
+<nav class="mobile-bottom-nav" aria-label="Main navigation">
+ <a class="mobile-nav-item active" data-mobile-tab="home" href="marketplace.html#discover" aria-current="page"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10 8.5-7 8.5 7v9a2 2 0 0 1-2 2h-4.7v-6h-3.6v6H5.5a2 2 0 0 1-2-2z"/></svg></span><span>Home</span></a>
+ <a class="mobile-nav-item" data-mobile-tab="search" href="marketplace.html?focus=search#discover"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.2"/><path d="m16.2 16.2 4.3 4.3"/></svg></span><span>Search</span></a>
+ <a class="mobile-nav-item" data-mobile-tab="add" href="marketplace.html?sell=1"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8m-4-4h8"/></svg></span><span>Add</span></a>
+ <a class="mobile-nav-item" data-mobile-tab="orders" href="orders.html"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="3"/><path d="M8.5 8h7m-7 4h7m-7 4h4"/></svg></span><span>Orders</span></a>
+ <a class="mobile-nav-item" data-mobile-tab="profile" href="profile.html"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span>Profile</span></a>
+</nav>
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><section class="modal" id="modal"></section></div><button id="messages-fab" class="messages-fab" onclick="openMessages()" aria-label="Messages" title="Messages" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4.5 5.5h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5.5 3v-3h-1.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/></svg><span class="messages-badge" id="messages-badge" hidden></span></button><div class="toast" id="toast"></div>
 <script src="assets/js/data.js"></script>
- <script src="assets/js/app.js?v=profile-page-1"></script>
+ <script src="assets/js/app.js?v=navbar-1"></script>
 </body>
 </html>
 

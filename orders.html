@@ -7,7 +7,7 @@
 <title>Orders &amp; transactions — Goodfind</title>
 <link rel="stylesheet" href="assets/css/styles.css?v=multi-photo-3">
 <link rel="stylesheet" href="assets/css/theme.css?v=dark-9">
-<link rel="stylesheet" href="assets/css/design-refresh.css?v=orders-page-1">
+<link rel="stylesheet" href="assets/css/design-refresh.css?v=navbar-1">
 <script src="assets/js/theme.js?v=dark-4"></script>
 </head>
 <body class="orders-page-body">
@@ -25,6 +25,13 @@
   <div id="orders-content" class="orders-page-content"><div class="orders-page-loading"><span class="orders-loading-mark" aria-hidden="true">↻</span><strong>Loading your orders</strong><small>Your requests and listings will be ready in a moment.</small></div></div>
 </main>
 <footer class="orders-page-footer"><a href="marketplace.html">← Back to marketplace</a><span>Goodfind · Buy, sell, and pass it on</span></footer>
+<nav class="mobile-bottom-nav" aria-label="Main navigation">
+ <a class="mobile-nav-item" data-mobile-tab="home" href="marketplace.html#discover"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10 8.5-7 8.5 7v9a2 2 0 0 1-2 2h-4.7v-6h-3.6v6H5.5a2 2 0 0 1-2-2z"/></svg></span><span>Home</span></a>
+ <a class="mobile-nav-item" data-mobile-tab="search" href="marketplace.html?focus=search#discover"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.2"/><path d="m16.2 16.2 4.3 4.3"/></svg></span><span>Search</span></a>
+ <a class="mobile-nav-item" data-mobile-tab="add" href="marketplace.html?sell=1"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8m-4-4h8"/></svg></span><span>Add</span></a>
+ <a class="mobile-nav-item active" data-mobile-tab="orders" href="orders.html" aria-current="page"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="3"/><path d="M8.5 8h7m-7 4h7m-7 4h4"/></svg></span><span>Orders</span></a>
+ <a class="mobile-nav-item" data-mobile-tab="profile" href="profile.html"><span class="mobile-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span>Profile</span></a>
+</nav>
 <div class="toast" id="orders-toast" role="status" aria-live="polite"></div>
 <script src="assets/js/orders-page.js?v=orders-page-1"></script>
 </body>

@@ -49,6 +49,8 @@ button,a,input,select,textarea{ -webkit-tap-highlight-color:transparent }
 .sortcontrol select{min-height:39px;border-radius:10px;padding:8px 12px}
 .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding-bottom:48px}
 .card{border:1px solid #e6ece6;border-radius:18px;box-shadow:0 4px 16px #203a2a08;transition:transform .2s,border-color .2s,box-shadow .2s}
+.card[data-item-card]{cursor:pointer}
+.card[data-item-card]:focus-visible,.card[data-item-card]:focus-within{outline:2px solid color-mix(in srgb,var(--green) 58%,transparent);outline-offset:2px}
 .card:hover{transform:translateY(-4px);border-color:#d6e2d7;box-shadow:0 17px 38px #203a2a12}
 .art{height:205px}
 .badge{border:1px solid #ffffff9c;border-radius:8px;padding:6px 9px;box-shadow:0 3px 10px #1e342512}
@@ -367,6 +369,60 @@ html[data-theme="dark"] .profile-all-empty>span,html[data-theme="dark"] .profile
 @media(max-width:850px){.profile-all-listings{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-identity-card{align-items:flex-start;flex-wrap:wrap}.profile-identity-copy{min-width:calc(100% - 105px)}.profile-identity-actions{width:100%;margin-left:101px}}
 @media(max-width:560px){.profile-page-shell{width:calc(100% - 28px);padding-top:18px}.profile-identity-card{gap:12px;padding:15px}.profile-identity-avatar{width:62px;height:62px;flex-basis:62px;font-size:19px}.profile-identity-copy{min-width:calc(100% - 75px)}.profile-identity-copy h2{font-size:18px}.profile-identity-copy p{font-size:10px}.profile-identity-actions{margin-left:0}.profile-identity-actions a{flex:1}.profile-listings-page-section{margin-top:25px}.profile-page-section-heading{align-items:flex-start;flex-direction:column}.profile-page-section-heading h1{font-size:25px}.profile-add-listing{min-height:36px}.profile-all-listings{grid-template-columns:1fr 1fr;gap:9px}.profile-all-listing-copy{gap:5px;padding:9px}.profile-all-listing-top{align-items:flex-start;flex-direction:column;gap:5px}.profile-all-listing-copy h3{font-size:12px}.profile-all-listing-price{font-size:14px}.profile-all-listing-copy>a{font-size:9px}.profile-page-footer{width:calc(100% - 28px);align-items:flex-start;flex-direction:column}.profile-market-link{display:none}}
 @media(max-width:360px){.profile-all-listings{grid-template-columns:1fr}}
+
+/* Loading feedback for initial marketplace results and ongoing actions. */
+.listing-skeleton{overflow:hidden;border:1px solid var(--line);border-radius:16px;background:var(--paper);box-shadow:0 5px 18px #203d2d08}
+.skeleton-block{display:block;border-radius:8px;background:linear-gradient(100deg,color-mix(in srgb,var(--line) 62%,var(--paper)) 18%,color-mix(in srgb,var(--paper) 78%,var(--canvas)) 38%,color-mix(in srgb,var(--line) 62%,var(--paper)) 62%);background-size:220% 100%;animation:skeleton-shimmer 1.45s ease-in-out infinite}
+.skeleton-image{aspect-ratio:1.42;background-color:var(--canvas)}
+.skeleton-copy{display:grid;gap:11px;padding:14px}
+.skeleton-line{width:100%;height:10px}
+.skeleton-line.skeleton-short{width:36%;height:8px}
+.skeleton-line.skeleton-medium{width:68%}
+.skeleton-button{width:100%;height:36px;margin-top:3px;border-radius:9px}
+@keyframes skeleton-shimmer{to{background-position-x:-220%}}
+.marketplace-load-error{grid-column:1/-1;display:flex;align-items:center;flex-direction:column;gap:8px;padding:35px 18px;text-align:center}
+.marketplace-load-error strong{color:var(--ink);font:750 15px Manrope,sans-serif}
+.marketplace-load-error span{color:var(--muted);font-size:12px}
+.marketplace-load-error button{margin-top:4px;padding:9px 13px}
+button.is-loading{display:inline-flex;align-items:center;justify-content:center;gap:9px;cursor:progress}
+button.is-loading::after{content:"";display:inline-block;width:14px;height:14px;flex:0 0 14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:button-spinner .72s linear infinite}
+@keyframes button-spinner{to{transform:rotate(360deg)}}
+.orders-loading-mark,.profile-loading-mark{width:39px;height:39px;border:3px solid var(--green2);border-top-color:var(--green);border-radius:50%;background:transparent;font-size:0;animation:button-spinner .8s linear infinite}
+html[data-theme="dark"] .skeleton-block{background:linear-gradient(100deg,#223640 18%,#2a414c 38%,#223640 62%);background-size:220% 100%}
+html[data-theme="dark"] .orders-loading-mark,html[data-theme="dark"] .profile-loading-mark{border-color:#294754;border-top-color:#95bccc;background:transparent}
+@media(prefers-reduced-motion:reduce){.skeleton-block{animation:none;background:color-mix(in srgb,var(--line) 72%,var(--paper))}button.is-loading::after,.orders-loading-mark,.profile-loading-mark{animation:none;border-right-color:currentColor;opacity:.8}}
+
+/* Keep the page width steady when the browser scrollbar appears. */
+html{scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--muted) 38%,var(--canvas)) transparent;overflow-x:clip}
+body{overflow-x:clip}
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:99px;background:color-mix(in srgb,var(--muted) 38%,var(--canvas));background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--muted) 64%,var(--canvas));background-clip:content-box}
+html[data-theme="dark"]{scrollbar-color:#49616d transparent}
+html[data-theme="dark"]::-webkit-scrollbar-thumb{background:#49616d;background-clip:content-box}
+html[data-theme="dark"]::-webkit-scrollbar-thumb:hover{background:#7895a2;background-clip:content-box}
+
+/* Compact five destination mobile navigation based on Goodfind's responsive app layout. */
+.mobile-bottom-nav{display:none}
+@media(max-width:760px){
+  body{padding-bottom:calc(91px + env(safe-area-inset-bottom))}
+  .mobile-bottom-nav{position:fixed;right:12px;bottom:calc(9px + env(safe-area-inset-bottom));left:12px;z-index:24;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;min-height:68px;padding:6px;border:1px solid color-mix(in srgb,var(--line) 82%,transparent);border-radius:20px;background:color-mix(in srgb,var(--paper) 94%,transparent);box-shadow:0 8px 26px #17291b22;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+  .mobile-nav-item{display:flex;align-items:center;flex-direction:column;justify-content:center;gap:3px;min-width:0;min-height:54px;border-radius:14px;color:var(--muted);font-size:9px;font-weight:650;text-decoration:none;transition:color .16s ease,transform .16s ease}
+  .mobile-nav-icon{display:grid;place-items:center;width:48px;height:32px;border-radius:15px;color:inherit;transition:width .18s ease,height .18s ease,background .18s ease,color .18s ease,transform .18s ease}
+  .mobile-nav-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .mobile-nav-item.active{color:var(--green);font-weight:750}
+  .mobile-nav-item.active .mobile-nav-icon{width:54px;height:34px;background:var(--green);color:#fff;box-shadow:0 4px 11px color-mix(in srgb,var(--green) 27%,transparent);transform:translateY(-1px)}
+  .mobile-nav-item:active{transform:scale(.96)}
+  .navright>.iconbtn,#signinbtn,#signupbtn,#avatar,#adminbtn,.navright>.sellbtn,.orders-back-link,.profile-market-link{display:none!important}
+  .messages-fab{right:17px;bottom:calc(88px + env(safe-area-inset-bottom))}
+  .toast{bottom:calc(91px + env(safe-area-inset-bottom))}
+}
+html[data-theme="dark"] .mobile-bottom-nav{border-color:#314b58;background:color-mix(in srgb,#192630 95%,transparent);box-shadow:0 8px 28px #0006}
+html[data-theme="dark"] .mobile-nav-item{color:#a7bac5}
+html[data-theme="dark"] .mobile-nav-item.active{color:#a6cbd9}
+html[data-theme="dark"] .mobile-nav-item.active .mobile-nav-icon{background:#2b4c59;color:#edf6fa;box-shadow:0 4px 12px #07121988}
+@media(prefers-reduced-motion:reduce){.mobile-nav-item,.mobile-nav-icon{transition:none}}
 
 /* Clearer order overview and step-by-step transaction cards. */
 .orders-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 11px}
