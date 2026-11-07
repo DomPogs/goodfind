@@ -20,7 +20,11 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 const price = value => '\u20B1' + Number(value).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 async function request(url, options = {}) {
-  const requestUrl = url.startsWith('/api/') ? `${appBasePath}${url}` : url;
+  let requestUrl=url;
+  if(url.startsWith('/api/')){
+    const parsed=new URL(url,location.origin);
+    requestUrl=`${appBasePath}/api.php?route=${encodeURIComponent(parsed.pathname)}${parsed.search?`&${parsed.search.slice(1)}`:''}`;
+  }
   const response = await fetch(requestUrl, { credentials:'same-origin', ...options,
     headers:{ ...(options.body ? {'Content-Type':'application/json'} : {}), ...(options.headers || {}) } });
   let data = {};
@@ -261,7 +265,7 @@ function accountPanel() {
   showModal(`<div class="modalhead"><div><div class="eyebrow">YOUR ACCOUNT</div><h2>Account settings</h2><p>Manage your profile and seller payouts.</p></div><button class="close" onclick="closeModal()">×</button></div>
     <div class="profile-summary"><div class="profile-avatar">${currentUser.profilePhoto?`<img src="${esc(currentUser.profilePhoto)}" alt="Profile photo">`:esc(currentUser.displayName.slice(0,2).toUpperCase())}</div><div class="profile-summary-copy"><strong>${esc(currentUser.displayName)}</strong><span>${esc(currentUser.email)}</span><small>${esc(currentUser.contactNo||'Add your contact number')} · ${esc(currentUser.schoolId||'Add your school ID')}</small></div><button class="filterbtn profile-edit-btn" onclick="editProfile()">Edit profile</button></div>
     <div class="id-verification-status ${esc(idStatus)}"><strong>School ID: ${esc(idStatusText)}</strong><small>${idStatus==='verified'?'Your ID number was reviewed by an admin.':idStatus==='pending'?'Your photo will be deleted after review.':idStatus==='rejected'?'Edit your profile to submit another clear photo.':'Edit your profile to submit a photo for review.'}</small></div>
-    <section class="profile-listings-section"><div class="profile-listings-heading"><div><strong>Your listings</strong><small>Your six most recent items</small></div><button type="button" class="filterbtn" onclick="location.href='profile.html'">View profile</button></div><div id="profile-listings-content" class="profile-listings-loading">Loading your items…</div></section>
+    <section class="profile-listings-section"><div class="profile-listings-heading"><div><strong>Your listings</strong><small>Your six most recent items</small></div><button type="button" class="filterbtn" onclick="location.href='profile.php'">View profile</button></div><div id="profile-listings-content" class="profile-listings-loading">Loading your items…</div></section>
     <div class="tradeoffer"><div class="yougive">SELLER PAYOUTS</div><p style="font-size:13px;line-height:1.6;color:#657168">${currentUser.payoutsConnected?'Your Stripe payouts account is connected.':'Connect a Stripe account to receive sale payouts.'}</p>
     ${currentUser.payoutsConnected?'':`<div class="field"><label>Two-letter payout country code</label><input id="country" maxlength="2" pattern="[A-Za-z]{2}" placeholder="e.g. US"></div><button class="filterbtn" style="width:100%" onclick="startPayoutSetup()">Set up payouts with Stripe</button>`}</div>
     <div class="account-signout"><div class="account-signout-copy"><span class="signout-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></svg></span><span><strong>Sign out</strong><small>End your Goodfind session on this device.</small></span></div><button class="signout-btn" onclick="signOut()" aria-label="Sign out of Goodfind">Sign out<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 5h8v14h-8M4 12h12m-4-4 4 4-4 4"/></svg></button></div>`);
@@ -312,7 +316,7 @@ async function signOut() {
 
 async function openAdmin() {
   if (!currentUser || currentUser.role !== 'admin') { notify('Admin access is required.'); return; }
-  location.href='http://localhost:3001/';
+  location.href=new URL('../goodfind-admin/',location.href).href;
 }
 async function moderateListing(id,status) {
   try {
@@ -324,13 +328,15 @@ async function moderateListing(id,status) {
   } catch(error) { notify(error.message); }
 }
 
-function openSell() {
+async function openSell(editListingId=null) {
   setMobileTab('add');
   if (!currentUser) { openAccount(); notify('Sign in to publish a listing.'); return; }
   if (currentUser.role!=='admin'&&currentUser.idVerificationStatus!=='verified') { accountPanel(); notify('Verify your school ID before listing an item.'); return; }
+  let editingListing=null;
+  if(editListingId){try{const result=await request(`/api/auth/listings/${Number(editListingId)}`);editingListing=result.listing;}catch(error){notify(error.message||'This listing could not be opened for editing.');return;}}
   showModal(`<div class="sell-head">
     <div class="sell-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></div>
-    <div class="sell-head-copy"><span class="sell-kicker">SELL ON YOUFIND</span><h2>Create a listing</h2><p>Add clear details and photos to help your item find a new home.</p></div>
+    <div class="sell-head-copy"><span class="sell-kicker">SELL ON YOUFIND</span><h2>${editingListing?'Edit your listing':'Create a listing'}</h2><p>${editingListing?'Update the item details, price, school, or photos. Your changes will be reviewed by an admin.':'Add clear details and photos to help your item find a new home.'}</p></div>
     <button class="close" type="button" onclick="closeModal()" aria-label="Close listing form">&#215;</button>
   </div>
   <div class="sell-steps" aria-label="Listing steps"><span class="sell-step-active"><i>1</i> Item details</span><span><i>2</i> Photos</span><span><i>3</i> Publish</span></div>
@@ -355,16 +361,23 @@ function openSell() {
       <div class="sell-section-head"><span class="sell-section-number">03</span><div><h3 id="sell-preferences-title">Selling preferences</h3><p>Choose whether you&rsquo;re open to swapping items.</p></div></div>
       <label class="sell-trade-option"><input type="checkbox" name="trade"><span class="sell-trade-icon" aria-hidden="true">&#8644;</span><span><strong>Open to trade offers</strong><small>Members can propose an item in exchange.</small></span><span class="sell-toggle-indicator" aria-hidden="true"></span></label>
     </section>
-    <div class="sell-form-footer"><button type="button" class="sell-cancel" onclick="closeModal()">Cancel</button><span class="sell-footer-note">Your item appears after an admin approves it.</span><button type="submit" class="primary sell-submit">Submit for review <span aria-hidden="true">&#8594;</span></button></div>
+    <div class="sell-form-footer"><button type="button" class="sell-cancel" onclick="closeModal()">Cancel</button><span class="sell-footer-note">${editingListing?'Edited items return to admin review.':'Your item appears after an admin approves it.'}</span><button type="submit" class="primary sell-submit">${editingListing?'Save changes':'Submit for review'} <span aria-hidden="true">&#8594;</span></button></div>
   </form>`);
   $('#modal').classList.add('sell-modal');
   const schoolField = $('#schoolfield');
-  const selectedPhotos=[];
+  const selectedPhotos=editingListing?(editingListing.photosData||[]).map(data=>({data,previewUrl:data})):[];
   const photoGrid=$('#photoPreviewGrid');
   const renderPhotoPreviews=()=>{
     $('#photoCount').textContent=`${selectedPhotos.length} of 10 ${selectedPhotos.length===1?'photo':'photos'} selected`;
-    photoGrid.innerHTML=selectedPhotos.map((photo,index)=>`<div class="photo-thumb ${index===0?'photo-thumb-cover':''}"><img src="${esc(photo.previewUrl)}" alt="Preview ${index+1}: ${esc(photo.file.name)}"><span class="photo-thumb-label">${index===0?'Cover photo':`Photo ${index+1}`}</span><button type="button" class="photo-thumb-remove" data-remove-photo="${index}" aria-label="Remove ${esc(photo.file.name)}">&#215;</button>${index>0?`<button type="button" class="photo-make-cover" data-cover-photo="${index}">Make cover</button>`:''}</div>`).join('');
+    photoGrid.innerHTML=selectedPhotos.map((photo,index)=>{const label=photo.file?.name||`Existing photo ${index+1}`;return `<div class="photo-thumb ${index===0?'photo-thumb-cover':''}"><img src="${esc(photo.previewUrl)}" alt="Preview ${index+1}: ${esc(label)}"><span class="photo-thumb-label">${index===0?'Cover photo':`Photo ${index+1}`}</span><button type="button" class="photo-thumb-remove" data-remove-photo="${index}" aria-label="Remove ${esc(label)}">&#215;</button>${index>0?`<button type="button" class="photo-make-cover" data-cover-photo="${index}">Make cover</button>`:''}</div>`}).join('');
   };
+  if(editingListing){
+    $('#itemTitle').value=editingListing.title||'';$('#itemPrice').value=editingListing.price||'';$('#itemDescription').value=editingListing.description||'';$('#itemSchool').value=editingListing.place||'';$('#itemCategory').value=editingListing.category||'Other';$('#sellform input[name="trade"]').checked=!!editingListing.trade;
+    if(![...$('#itemCategory').options].some(option=>option.value===editingListing.category)){const option=new Option(editingListing.category,editingListing.category,true,true);$('#itemCategory').add(option);}
+    const kindRadio=$(`#sellform input[name="kind"][value="${editingListing.kind==='digital'?'digital':'physical'}"]`);if(kindRadio){kindRadio.checked=true;kindRadio.dispatchEvent(new Event('change',{bubbles:true}));}
+    $('#itemCondition').value=editingListing.condition||'';
+  }
+  renderPhotoPreviews();
   $('#itemPhoto').addEventListener('change',event=>{
     const input=event.currentTarget;const files=[...input.files];input.value='';
     const remaining=10-selectedPhotos.length;
@@ -377,7 +390,7 @@ function openSell() {
   });
   photoGrid.addEventListener('click',event=>{
     const remove=event.target.closest('[data-remove-photo]');
-    if(remove){const index=Number(remove.dataset.removePhoto);const [photo]=selectedPhotos.splice(index,1);if(photo)URL.revokeObjectURL(photo.previewUrl);renderPhotoPreviews();return;}
+    if(remove){const index=Number(remove.dataset.removePhoto);const [photo]=selectedPhotos.splice(index,1);if(photo?.file)URL.revokeObjectURL(photo.previewUrl);renderPhotoPreviews();return;}
     const cover=event.target.closest('[data-cover-photo]');
     if(cover){const [photo]=selectedPhotos.splice(Number(cover.dataset.coverPhoto),1);if(photo)selectedPhotos.unshift(photo);renderPhotoPreviews();}
   });
@@ -403,10 +416,11 @@ function openSell() {
       submitButton.classList.add('is-loading');
       submitButton.setAttribute('aria-busy','true');
       $('#itemPhoto').disabled=true;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=true);
-      if(selectedPhotos.length){draft.photosData=[];for(let index=0;index<selectedPhotos.length;index++){submitButton.textContent=`Processing photo ${index+1} of ${selectedPhotos.length}…`;draft.photosData.push(await compressPhoto(selectedPhotos[index].file));}}
-      submitButton.textContent='Publishing listing…';
-      await post('/api/listings',draft); closeModal(); notify('Listing submitted for admin review. It will appear after approval.');
-    } catch (error) { notify(error.message);submitButton.disabled=false;submitButton.classList.remove('is-loading');submitButton.removeAttribute('aria-busy');submitButton.textContent='Publish listing';$('#itemPhoto').disabled=false;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=false); }
+      if(selectedPhotos.length||editingListing){draft.photosData=[];for(let index=0;index<selectedPhotos.length;index++){submitButton.textContent=`Processing photo ${index+1} of ${selectedPhotos.length}…`;const photo=selectedPhotos[index];draft.photosData.push(photo.data||await compressPhoto(photo.file));}}
+      submitButton.textContent=editingListing?'Saving changes…':'Publishing listing…';
+      if(editingListing){await patch(`/api/listings/${Number(editingListing.id)}`,draft);closeModal();notify('Changes saved. Your listing is back in admin review.');}
+      else{await post('/api/listings',draft);closeModal();notify('Listing submitted for admin review. It will appear after approval.');}
+    } catch (error) { notify(error.message);submitButton.disabled=false;submitButton.classList.remove('is-loading');submitButton.removeAttribute('aria-busy');submitButton.textContent=editingListing?'Save changes':'Publish listing';$('#itemPhoto').disabled=false;photoGrid.querySelectorAll('button').forEach(button=>button.disabled=false); }
   };
 }
 function compressPhoto(file) {
@@ -561,7 +575,7 @@ function renderOrders(data, tab=selectedOrdersTab||'buying') {
     <section class="orders-section orders-tab-panel">${tabContent}</section>`;
 }
 function openOrders(tab=null,created=false) {
-  const destination=new URL(`${appBasePath}/orders.html`,location.origin);
+  const destination=new URL(`${appBasePath}/orders.php`,location.origin);
   if(tab)destination.searchParams.set('tab',tab);
   if(created)destination.searchParams.set('created','1');
   location.href=destination.pathname+destination.search;
@@ -763,7 +777,10 @@ async function boot() {
   if (params.get('payout_setup')==='return'&&currentUser) {
     try { await request('/api/payments/connect/status'); const account=await request('/api/auth/me');currentUser=account.user;updateNav();notify(currentUser.payoutsConnected?'Payout setup is complete.':'Stripe may need more information before payouts are enabled.'); } catch(error) { notify(error.message); }
   }
-  if (params.get('sell')==='1') openSell();
+  if (params.get('editListing')) {
+    const listingId=Number(params.get('editListing'));const cleanUrl=new URL(location.href);cleanUrl.searchParams.delete('editListing');history.replaceState(null,'',cleanUrl);
+    if(Number.isInteger(listingId)&&listingId>0){if(currentUser)await openSell(listingId);else{openAccount();notify('Sign in to edit your listing.');}}
+  } else if (params.get('sell')==='1') openSell();
 }
 
 render();

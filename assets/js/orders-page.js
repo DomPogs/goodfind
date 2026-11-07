@@ -12,7 +12,8 @@ const html = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&am
 const peso = value => `₱${Number(value || 0).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 
 async function api(path, options = {}) {
-  const response = await fetch(`${pageBasePath}${path}`, {
+  const parsed=new URL(path,location.href);
+  const response = await fetch(`${pageBasePath}/api.php?route=${encodeURIComponent(parsed.pathname)}${parsed.search?`&${parsed.search.slice(1)}`:''}`, {
     credentials: 'same-origin',
     ...options,
     headers: {...(options.body ? {'Content-Type':'application/json'} : {}), ...(options.headers || {})}
@@ -77,11 +78,15 @@ function renderOrder(order) {
 function renderListing(listing) {
   const labels = {active:'Available', pending:'Awaiting admin review', rejected:'Rejected by admin', reserved:'Reserved', sold:'Sold', hidden:'Hidden by admin', traded:'Traded'};
   let controls = '';
-  if (listing.status === 'active') controls = `<button type="button" class="filterbtn" data-listing-status="reserved" data-listing-id="${listing.id}">Mark reserved</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
-  else if (listing.status === 'reserved' && listing.approvedCount > 0) controls = '<span class="order-wait-note">Reserved for an approved order.</span>';
-  else if (listing.status === 'reserved') controls = `<button type="button" class="filterbtn" data-listing-status="available" data-listing-id="${listing.id}">Make available</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
-  else if (listing.status === 'sold') controls = `<button type="button" class="filterbtn" data-listing-status="available" data-listing-id="${listing.id}">Relist item</button>`;
-  return `<article class="managed-listing"><div><strong>${html(listing.title)}</strong><small>${peso(listing.price)} · ${listing.queuedCount} waiting request${listing.queuedCount === 1 ? '' : 's'}</small></div><span class="order-state order-state-${html(listing.status)}">${html(labels[listing.status] || listing.status)}</span><div class="managed-listing-actions">${controls}</div></article>`;
+  if (['active','pending','hidden','rejected'].includes(listing.status)) controls += `<a class="filterbtn" href="marketplace.php?editListing=${listing.id}">Edit listing</a>`;
+  if (listing.status === 'active') controls += `<button type="button" class="filterbtn" data-listing-status="reserved" data-listing-id="${listing.id}">Mark reserved</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
+  else if (listing.status === 'reserved' && listing.approvedCount > 0) controls += '';
+  else if (listing.status === 'reserved') controls += `<button type="button" class="filterbtn" data-listing-status="available" data-listing-id="${listing.id}">Make available</button><button type="button" class="filterbtn" data-listing-status="sold" data-listing-id="${listing.id}">Mark sold offline</button>`;
+  else if (listing.status === 'sold') controls += `<button type="button" class="filterbtn" data-listing-status="available" data-listing-id="${listing.id}">Relist item</button>`;
+  const deleteControl = listing.approvedCount > 0
+    ? '<span class="order-wait-note">Reserved for an approved order. Finish or cancel it before deleting.</span>'
+    : `<button type="button" class="delete-btn" data-listing-delete="${listing.id}">Delete listing</button>`;
+  return `<article class="managed-listing"><div><strong>${html(listing.title)}</strong><small>${peso(listing.price)} · ${listing.queuedCount} waiting request${listing.queuedCount === 1 ? '' : 's'}</small></div><span class="order-state order-state-${html(listing.status)}">${html(labels[listing.status] || listing.status)}</span><div class="managed-listing-actions">${controls}${deleteControl}</div></article>`;
 }
 
 function defaultTab(data) {
@@ -103,7 +108,7 @@ function render() {
   if (activeOrdersTab === 'selling') {
     section = `<div class="orders-section-heading"><div><h2>Requests from buyers</h2><small>Approve the next request to reserve the item.</small></div><span>${selling.length}</span></div>${selling.length ? `<div class="order-stack">${selling.map(renderOrder).join('')}</div>` : '<div class="orders-empty"><strong>No buyer requests yet</strong><small>Requests for your items will show up here.</small></div>'}`;
   } else if (activeOrdersTab === 'listings') {
-    section = `<div class="orders-section-heading"><div><h2>Your listed items</h2><small>Update availability or review buyer requests.</small></div><span>${data.myListings.length}</span></div>${data.myListings.length ? `<div class="managed-listings">${data.myListings.map(renderListing).join('')}</div>` : '<div class="orders-empty"><strong>No items listed yet</strong><small>Publish an item and manage it here.</small></div>'}<p class="orders-footnote">Marking an item sold offline closes its open requests. Complete an approved order after the handoff so both people can leave a review.</p>`;
+    section = `<div class="orders-section-heading"><div><h2>Your listed items</h2><small>Update availability, remove listings, or review buyer requests.</small></div><span>${data.myListings.length}</span></div>${data.myListings.length ? `<div class="managed-listings">${data.myListings.map(renderListing).join('')}</div>` : '<div class="orders-empty"><strong>No items listed yet</strong><small>Publish an item and manage it here.</small></div>'}<p class="orders-footnote">Deleting removes an item from the marketplace and cancels waiting requests. Approved exchanges must be completed or cancelled first; past transaction records are kept.</p>`;
   } else {
     section = `<div class="orders-section-heading"><div><h2>Your purchase requests</h2><small>Follow each request until the exchange is complete.</small></div><span>${buying.length}</span></div>${buying.length ? `<div class="order-stack">${buying.map(renderOrder).join('')}</div>` : '<div class="orders-empty"><strong>No purchase requests yet</strong><small>When you request an item, its progress will show up here.</small></div>'}`;
   }
@@ -140,7 +145,7 @@ ordersRoot.addEventListener('click', async event => {
   }
   const messageButton = event.target.closest('[data-order-message]');
   if (messageButton) {
-    location.href = `${pageBasePath}/marketplace.html?openMessage=${encodeURIComponent(messageButton.dataset.orderMessage)}`;
+    location.href = `${pageBasePath}/marketplace.php?openMessage=${encodeURIComponent(messageButton.dataset.orderMessage)}`;
     return;
   }
   const orderButton = event.target.closest('[data-order-action]');
@@ -159,6 +164,26 @@ ordersRoot.addEventListener('click', async event => {
       showToast(action === 'approved' ? 'Order approved. The item is now reserved.' : action === 'completed' ? 'Exchange completed. The item is marked sold.' : 'Order updated.');
       await loadOrders();
     } catch (error) { showToast(error.message); orderButton.disabled = false; orderButton.classList.remove('is-loading'); orderButton.removeAttribute('aria-busy'); }
+    return;
+  }
+  const deleteButton = event.target.closest('[data-listing-delete]');
+  if (deleteButton) {
+    const listingId = Number(deleteButton.dataset.listingDelete);
+    const listing = ordersData?.myListings.find(item => item.id === listingId);
+    if (!listing || !window.confirm(`Delete “${listing.title}” from the marketplace? Waiting buyer requests will be cancelled. Past transaction records will be kept.`)) return;
+    deleteButton.disabled = true;
+    deleteButton.classList.add('is-loading');
+    deleteButton.setAttribute('aria-busy','true');
+    try {
+      await api(`/api/listings/${listingId}`, {method:'DELETE'});
+      showToast('Listing deleted from the marketplace.');
+      await loadOrders();
+    } catch (error) {
+      showToast(error.message);
+      deleteButton.disabled = false;
+      deleteButton.classList.remove('is-loading');
+      deleteButton.removeAttribute('aria-busy');
+    }
     return;
   }
   const listingButton = event.target.closest('[data-listing-status]');

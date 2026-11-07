@@ -16,7 +16,7 @@
 <header class="landing-shell landing-header">
   <a class="landing-brand" href="./" aria-label="YouFind home"><span class="brand-mark" aria-hidden="true">↗</span>YouFind</a>
   <nav class="landing-nav" aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#local-finds">Made for local finds</a></nav>
-  <div class="landing-actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme"><span aria-hidden="true">&#9790;</span></button><a class="landing-signin" id="landingAccountLink" href="auth/?mode=login">Sign in</a><a class="landing-button" href="marketplace.html#discover">Explore items <span aria-hidden="true">→</span></a></div>
+  <div class="landing-actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme"><span aria-hidden="true">&#9790;</span></button><a class="landing-signin" id="landingAccountLink" href="auth/?mode=login">Sign in</a><a class="landing-button" href="marketplace.php#discover">Explore items <span aria-hidden="true">→</span></a></div>
 </header>
 <main>
   <section class="landing-shell landing-hero" aria-labelledby="hero-title">
@@ -24,7 +24,7 @@
       <div class="eyebrow">Good finds, closer to home</div>
       <h1 id="hero-title">Find it. Love it. <span>Pass it on.</span></h1>
       <p>A thoughtful local marketplace to discover useful things, share what you no longer need, and make a good trade.</p>
-      <div class="hero-buttons"><a class="landing-button" href="marketplace.html#discover">Browse the marketplace <span aria-hidden="true">→</span></a><a class="landing-button outline" href="marketplace.html?sell=1">List something good</a></div>
+      <div class="hero-buttons"><a class="landing-button" href="marketplace.php#discover">Browse the marketplace <span aria-hidden="true">→</span></a><a class="landing-button outline" href="marketplace.php?sell=1">List something good</a></div>
       <div class="hero-proof"><span class="proof-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Buy, sell, and trade in one community</span></div>
     </div>
     <div class="hero-art" aria-hidden="true">
@@ -46,9 +46,9 @@
   <section class="landing-shell landing-feature" id="local-finds">
     <div class="feature-copy"><div class="eyebrow">Rooted in your community</div><h2>Closer finds.<br>Better connections.</h2><p>YouFind brings members together around the things they want to find, sell, or trade. Start with a listing, then connect directly to agree on what works for you.</p><div class="feature-points"><span>Explore different kinds of listings</span><span>Keep your chats in one place</span><span>One account for buying and selling</span></div></div>
   </section>
-  <section class="landing-shell landing-cta"><div><h2>Ready to find something good?</h2><p>Explore the marketplace or share something with the community.</p></div><a class="landing-button light" href="marketplace.html#discover">Explore YouFind <span aria-hidden="true">→</span></a></section>
+  <section class="landing-shell landing-cta"><div><h2>Ready to find something good?</h2><p>Explore the marketplace or share something with the community.</p></div><a class="landing-button light" href="marketplace.php#discover">Explore YouFind <span aria-hidden="true">→</span></a></section>
 </main>
-<footer class="landing-shell landing-footer"><a class="footer-brand" href="./">↗ YouFind</a><span>Find good things. Pass good things on.</span><nav class="footer-links" aria-label="Footer"><a href="marketplace.html#discover">Marketplace</a><a href="auth/?mode=signup">Create account</a></nav></footer>
-<script src="assets/js/landing.js?v=session-1" defer></script>
+<footer class="landing-shell landing-footer"><a class="footer-brand" href="./">↗ YouFind</a><span>Find good things. Pass good things on.</span><nav class="footer-links" aria-label="Footer"><a href="marketplace.php#discover">Marketplace</a><a href="auth/?mode=signup">Create account</a></nav></footer>
+<script src="assets/js/landing.js?v=php-api-1" defer></script>
 </body>
 </html>

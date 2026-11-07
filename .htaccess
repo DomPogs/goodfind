@@ -1,0 +1,15 @@
+Options -Indexes
+
+<FilesMatch "^(\.env|server\.js|package(-lock)?\.json)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(\.git|database|server-data|logs)(/|$) - [F,L,NC]
+</IfModule>
+
+<IfModule mod_php.c>
+    php_value post_max_size 24M
+    php_value memory_limit 256M
+</IfModule>

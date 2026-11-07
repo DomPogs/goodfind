@@ -1,0 +1,11 @@
+{
+  "name": "youfind-local-marketplace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PHP and MySQL local campus marketplace",
+  "main": "api.php",
+  "scripts": {
+    "start": "echo Start Apache and MySQL in XAMPP, run start-php.bat, then open http://localhost/goodfind"
+  },
+  "dependencies": {}
+}

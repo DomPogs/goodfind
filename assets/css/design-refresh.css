@@ -257,8 +257,11 @@ html[data-theme="dark"] .toast{background:#203743;color:#e3edf2}
 .managed-listing small{margin-top:4px;color:var(--muted);font-size:9px}
 .managed-listing-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
 .managed-listing-actions button{min-height:29px;padding:0 9px;font-size:9px}
+.managed-listing-actions .delete-btn{border:1px solid #edc5bf;border-radius:8px;background:#fff8f6;color:#a7433c}
+.managed-listing-actions .delete-btn:hover{border-color:#d9958b;background:#fff0ed;color:#8f332c}
 html[data-theme="dark"] .orders-modal>.modalhead{background:var(--paper)}
 html[data-theme="dark"] .order-card,html[data-theme="dark"] .managed-listing{background:#172630;border-color:var(--line)}
+html[data-theme="dark"] .managed-listing-actions .delete-btn,html[data-theme="dark"] .managed-listing-actions .delete-btn:hover{border-color:#69423c;background:#382522;color:#ffc0b0}
 html[data-theme="dark"] .order-item-thumb{background:#203743;border-color:#3b5967;color:#b5d1dc}
 html[data-theme="dark"] .order-state-queued{background:#3b3826;border-color:#5b5535;color:#e3d99c}
 html[data-theme="dark"] .order-state-approved,html[data-theme="dark"] .order-state-reserved,html[data-theme="dark"] .order-state-active{background:#203743;border-color:#3e5f6e;color:#a8cad7}

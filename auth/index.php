@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f7f7f3">
 <title>Sign in or sign up — YouFind</title>
-<link rel="icon" type="image/jpeg" href="../photos/you%20find%20icon.jpg">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
 <link rel="stylesheet" href="../assets/css/styles.css?v=multi-photo-3">
 <link rel="stylesheet" href="auth.css?v=id-upload-1">
 <link rel="stylesheet" href="../assets/css/theme.css?v=dark-9">
@@ -13,7 +13,7 @@
 <script src="../assets/js/theme.js?v=dark-4"></script>
 </head>
 <body>
-<header class="authbar"><div class="authbarinner"><a class="logo" href="../"><span class="logo-mark">↗</span>YouFind</a><div class="auth-tools"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme"><span aria-hidden="true">&#9790;</span></button><a class="backlink" href="../marketplace.html">← Back to marketplace</a></div></div></header>
+<header class="authbar"><div class="authbarinner"><a class="logo" href="../"><span class="logo-mark">↗</span>YouFind</a><div class="auth-tools"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme" title="Switch color theme"><span aria-hidden="true">&#9790;</span></button><a class="backlink" href="../marketplace.php">← Back to marketplace</a></div></div></header>
 <main class="authmain">
   <section class="authlayout" aria-label="Sign in or create a YouFind account">
     <div class="authstory"><div><div class="eyebrow">A better way to pass things on</div><h1>Good things are <span>closer</span> than you think.</h1><p>Find useful items in your school community, share what you no longer need, and make a good trade.</p></div><div class="authquote">“Found exactly what I needed from someone just a few steps away.”<strong>— A YouFind community member</strong></div></div>
@@ -34,11 +34,11 @@
       </form>
       <div class="authnotice" id="authnotice" role="status" aria-live="polite"></div>
       <p class="authlegal">By continuing, you agree to use YouFind respectfully and keep trades clear and fair.</p>
-      <p class="authlegal"><a href="http://localhost:3001/">Administrator? Use the dedicated admin sign-in.</a></p>
+      <p class="authlegal"><a href="../goodfind-admin/">Administrator? Use the dedicated admin sign-in.</a></p>
     </div>
   </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
-<script src="auth.js?v=id-ocr-4" defer></script>
+<script src="auth.js?v=php-api-1" defer></script>
 </body>
 </html>

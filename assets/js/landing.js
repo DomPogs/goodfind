@@ -8,7 +8,8 @@ async function syncLandingSession(){
   if(sessionCheckRunning||document.visibilityState==='hidden')return;
   sessionCheckRunning=true;
   try{
-    const response=await fetch(new URL('api/auth/me',location.href),{credentials:'same-origin',cache:'no-store'});
+    const apiUrl=new URL('api.php',location.href);apiUrl.searchParams.set('route','/api/auth/me');
+    const response=await fetch(apiUrl,{credentials:'same-origin',cache:'no-store'});
     if(!response.ok)return;
     const {user}=await response.json();
     if(!user){
@@ -20,7 +21,7 @@ async function syncLandingSession(){
       return;
     }
     accountLink.textContent='My account';
-    accountLink.href='marketplace.html#discover';
+    accountLink.href='marketplace.php#discover';
     accountLink.title=`Signed in as ${user.displayName||user.email}`;
     accountLink.setAttribute('aria-label',`My account, signed in as ${user.displayName||user.email}`);
     if(adminLink)adminLink.textContent=user.role==='admin'?'Admin panel':'Admin login';

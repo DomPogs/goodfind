@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f7f7f3">
 <title>Admin preview — YouFind</title>
-<link rel="icon" type="image/jpeg" href="../photos/you%20find%20icon.jpg">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
 <link rel="stylesheet" href="../assets/css/styles.css?v=multi-photo-2">
 <link rel="stylesheet" href="admin.css?v=design-1">
 <link rel="stylesheet" href="../assets/css/design-refresh.css?v=scroll-stable-1">
 </head>
 <body class="admin-page">
-<header class="admin-topbar"><a class="logo" href="../marketplace.html"><span class="logo-mark">↗</span>YouFind</a><div class="admin-topright"><span class="preview-chip">UI PREVIEW</span><button class="admin-user" type="button"><span class="admin-user-avatar">A</span><span>Administrator<small>Preview account</small></span></button></div></header>
+<header class="admin-topbar"><a class="logo" href="../marketplace.php"><span class="logo-mark">↗</span>YouFind</a><div class="admin-topright"><span class="preview-chip">UI PREVIEW</span><button class="admin-user" type="button"><span class="admin-user-avatar">A</span><span>Administrator<small>Preview account</small></span></button></div></header>
 <div class="admin-shell">
-  <aside class="admin-sidebar"><div class="sidebar-label">WORKSPACE</div><a class="sidebar-link active" href="#overview">▦ <span>Overview</span></a><a class="sidebar-link" href="#listings">▤ <span>Listings</span><b id="sidebarListingCount">0</b></a><a class="sidebar-link" href="#members">♙ <span>Members</span></a><a class="sidebar-link" href="#orders">⇄ <span>Orders & trades</span></a><div class="sidebar-bottom"><a href="../marketplace.html">← Back to marketplace</a></div></aside>
+  <aside class="admin-sidebar"><div class="sidebar-label">WORKSPACE</div><a class="sidebar-link active" href="#overview">▦ <span>Overview</span></a><a class="sidebar-link" href="#listings">▤ <span>Listings</span><b id="sidebarListingCount">0</b></a><a class="sidebar-link" href="#members">♙ <span>Members</span></a><a class="sidebar-link" href="#orders">⇄ <span>Orders & trades</span></a><div class="sidebar-bottom"><a href="../marketplace.php">← Back to marketplace</a></div></aside>
   <main class="admin-content" id="overview">
     <div class="admin-heading"><div><div class="eyebrow">MARKETPLACE MANAGEMENT</div><h1>Overview</h1><p>Welcome back. Here’s what’s happening on YouFind.</p></div><button class="date-chip" type="button">Today · Preview</button></div>
     <div class="preview-banner"><span>ⓘ</span><p>This is a presentation-only preview. The sample actions below don’t change marketplace data.</p></div>

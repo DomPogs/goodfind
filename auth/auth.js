@@ -119,10 +119,11 @@ authForm.addEventListener('submit',async event=>{
   if(signup)Object.assign(body,{displayName:values.get('displayName'),schoolId:values.get('schoolId'),contactNo:values.get('contactNo'),idPhoto:idPhotoData});
   submit.disabled=true; notice.classList.remove('error'); notice.textContent='Please wait…'; notice.classList.add('show');
   try{
-    const response=await fetch(`${appBasePath}/api/auth/${signup?'register':'login'}`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const apiUrl=`${appBasePath}/api.php?route=${encodeURIComponent(`/api/auth/${signup?'register':'login'}`)}`;
+    const response=await fetch(apiUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const result=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(result.error||`Request failed (${response.status}).`);
-    location.href=safeReturnTo()||`${appBasePath}/marketplace.html`;
+    location.href=safeReturnTo()||`${appBasePath}/marketplace.php`;
   }catch(error){notice.textContent=error.message||'Could not connect to Goodfind. Try again.';notice.classList.add('error');}
   finally{submit.disabled=false;}
 });

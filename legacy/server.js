@@ -19,7 +19,7 @@ const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN || `http://localhost:${ADMIN_PORT
 const SESSION_DAYS = 30;
 const bodyLimit = 16 * 1024 * 1024;
 const loginAttempts = new Map();
-const mime = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
+const mime = { '.php':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp' };
 const pool = mysql.createPool({host:process.env.DB_HOST||'127.0.0.1',port:Number(process.env.DB_PORT||3306),database:process.env.DB_NAME||'youfind',user:process.env.DB_USER||'root',password:process.env.DB_PASSWORD||'',waitForConnections:true,connectionLimit:10,charset:'utf8mb4',decimalNumbers:true});
 const transactionContext = new AsyncLocalStorage();
 const db = {
@@ -734,8 +734,8 @@ async function handler(req,res) {
       return res.end();
     }
     const publicFiles = new Map([
-      ['/','index.html'],['/index.html','index.html'],['/assets/favicon.png','assets/favicon.png'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/css/design-refresh.css','assets/css/design-refresh.css'],['/assets/js/theme.js','assets/js/theme.js'],['/assets/js/landing.js','assets/js/landing.js'],['/marketplace.html','marketplace.html'],['/orders.html','orders.html'],['/profile.html','profile.html'],['/assets/js/profile-page.js','assets/js/profile-page.js'],['/assets/js/orders-page.js','assets/js/orders-page.js'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
-      ['/auth/','auth/index.html'],['/auth/index.html','auth/index.html'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js']
+      ['/','index.php'],['/index.php','index.php'],['/assets/favicon.png','assets/favicon.png'],['/assets/css/landing.css','assets/css/landing.css'],['/assets/css/theme.css','assets/css/theme.css'],['/assets/css/design-refresh.css','assets/css/design-refresh.css'],['/assets/js/theme.js','assets/js/theme.js'],['/assets/js/landing.js','assets/js/landing.js'],['/marketplace.php','marketplace.php'],['/orders.php','orders.php'],['/profile.php','profile.php'],['/assets/js/profile-page.js','assets/js/profile-page.js'],['/assets/js/orders-page.js','assets/js/orders-page.js'],['/assets/css/styles.css','assets/css/styles.css'],['/assets/js/data.js','assets/js/data.js'],['/assets/js/app.js','assets/js/app.js'],
+      ['/auth/','auth/index.php'],['/auth/index.php','auth/index.php'],['/auth/auth.css','auth/auth.css'],['/auth/auth.js','auth/auth.js']
     ]);
     const asset = publicFiles.get(decodeURIComponent(url.pathname));
     if (!asset) return send(res,404,{error:'Not found.'});
@@ -756,7 +756,7 @@ async function adminHandler(req,res){
   try{
     if(req.method!=='GET'&&req.method!=='HEAD')return send(res,405,{error:'Method not allowed.'});
     const route=new URL(req.url,'http://localhost').pathname;
-    const files=new Map([['/','live.html'],['/index.html','live.html'],['/admin.css','live.css'],['/admin.js','live.js'],['/assets/favicon.png',path.join(ROOT,'assets/favicon.png')],['/assets/css/styles.css',path.join(ROOT,'assets/css/styles.css')],['/assets/css/theme.css',path.join(ROOT,'assets/css/theme.css')],['/assets/css/design-refresh.css',path.join(ROOT,'assets/css/design-refresh.css')],['/assets/js/theme.js',path.join(ROOT,'assets/js/theme.js')]]);
+    const files=new Map([['/','live.php'],['/index.php','live.php'],['/admin.css','live.css'],['/admin.js','live.js'],['/assets/favicon.png',path.join(ROOT,'assets/favicon.png')],['/assets/css/styles.css',path.join(ROOT,'assets/css/styles.css')],['/assets/css/theme.css',path.join(ROOT,'assets/css/theme.css')],['/assets/css/design-refresh.css',path.join(ROOT,'assets/css/design-refresh.css')],['/assets/js/theme.js',path.join(ROOT,'assets/js/theme.js')]]);
     const asset=files.get(decodeURIComponent(route));
     if(!asset)return send(res,404,{error:'Not found.'});
     const filePath=path.isAbsolute(asset)?asset:path.join(ADMIN_ROOT,asset);

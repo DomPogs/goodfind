@@ -13,7 +13,8 @@ const formatPrice = value => `₱${Number(value || 0).toLocaleString('en-PH', {m
 const statusNames = {active:'Available', pending:'Awaiting admin review', rejected:'Rejected by admin', reserved:'Reserved', sold:'Sold', hidden:'Hidden', traded:'Traded'};
 
 async function getJson(path) {
-  const response = await fetch(`${profileBasePath}${path}`, {credentials:'same-origin'});
+  const parsed=new URL(path,location.href);
+  const response = await fetch(`${profileBasePath}/api.php?route=${encodeURIComponent(parsed.pathname)}${parsed.search?`&${parsed.search.slice(1)}`:''}`, {credentials:'same-origin'});
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
   return data;
@@ -35,7 +36,7 @@ function renderIdentity(user) {
     : `<span>${escapeHtml(user.displayName.slice(0,2).toUpperCase())}</span>`;
   const verification = user.idVerificationStatus || 'unsubmitted';
   const verificationNames = {verified:'School ID verified', pending:'ID review pending', rejected:'ID needs resubmission', unsubmitted:'ID not submitted'};
-  identityHost.innerHTML = `<div class="profile-identity-avatar">${avatar}</div><div class="profile-identity-copy"><div class="eyebrow">GOODFIND MEMBER</div><h2>${escapeHtml(user.displayName)}</h2><p>${escapeHtml(user.schoolId || 'School community member')} <span aria-hidden="true">·</span> ${escapeHtml(formatMemberSince(user.createdAt))}</p><span class="profile-verification-pill ${escapeHtml(verification)}"><i aria-hidden="true"></i>${escapeHtml(verificationNames[verification] || verificationNames.unsubmitted)}</span></div><div class="profile-identity-actions"><a class="filterbtn" href="marketplace.html?account=1">Account settings</a><a class="filterbtn" href="orders.html?tab=listings">Manage listings</a></div>`;
+  identityHost.innerHTML = `<div class="profile-identity-avatar">${avatar}</div><div class="profile-identity-copy"><div class="eyebrow">GOODFIND MEMBER</div><h2>${escapeHtml(user.displayName)}</h2><p>${escapeHtml(user.schoolId || 'School community member')} <span aria-hidden="true">·</span> ${escapeHtml(formatMemberSince(user.createdAt))}</p><span class="profile-verification-pill ${escapeHtml(verification)}"><i aria-hidden="true"></i>${escapeHtml(verificationNames[verification] || verificationNames.unsubmitted)}</span></div><div class="profile-identity-actions"><a class="filterbtn" href="marketplace.php?account=1">Account settings</a><a class="filterbtn" href="orders.php?tab=listings">Manage listings</a></div>`;
 }
 
 function filteredListings() {
@@ -48,7 +49,8 @@ function listingCard(item) {
     : `<span>${escapeHtml(item.emoji || '◇')}</span>`;
   const date = new Date(item.createdAt);
   const listed = Number.isNaN(date.getTime()) ? '' : `Listed ${date.toLocaleDateString('en-PH', {month:'short', day:'numeric', year:'numeric'})}`;
-  return `<article class="profile-all-listing-card"><div class="profile-all-listing-image" style="background:${escapeHtml(item.art || 'var(--canvas)')}">${thumb}</div><div class="profile-all-listing-copy"><div class="profile-all-listing-top"><span>${escapeHtml(item.category || 'Other')}</span><span class="order-state order-state-${escapeHtml(item.status)}">${escapeHtml(statusNames[item.status] || item.status)}</span></div><h3>${escapeHtml(item.title)}</h3><strong class="profile-all-listing-price">${formatPrice(item.price)}</strong><small>${escapeHtml(listed)}</small><a href="orders.html?tab=listings">Manage listing <span aria-hidden="true">→</span></a></div></article>`;
+  const editable=['active','pending','hidden','rejected'].includes(item.status);
+  return `<article class="profile-all-listing-card"><div class="profile-all-listing-image" style="background:${escapeHtml(item.art || 'var(--canvas)')}">${thumb}</div><div class="profile-all-listing-copy"><div class="profile-all-listing-top"><span>${escapeHtml(item.category || 'Other')}</span><span class="order-state order-state-${escapeHtml(item.status)}">${escapeHtml(statusNames[item.status] || item.status)}</span></div><h3>${escapeHtml(item.title)}</h3><strong class="profile-all-listing-price">${formatPrice(item.price)}</strong><small>${escapeHtml(listed)}</small><a href="${editable?`marketplace.php?editListing=${Number(item.id)}`:'orders.php?tab=listings'}">${editable?'Edit listing':'Manage listing'} <span aria-hidden="true">→</span></a></div></article>`;
 }
 
 function renderListings() {
@@ -61,7 +63,7 @@ function renderListings() {
   filtersHost.innerHTML = filters.map(([key,label]) => `<button type="button" class="profile-listing-filter ${activeFilter === key ? 'active' : ''}" data-profile-filter="${key}" aria-pressed="${activeFilter === key}">${label}<span>${counts[key] || 0}</span></button>`).join('');
   const items = filteredListings();
   if (!profileListings.length) {
-    listingHost.innerHTML = `<div class="profile-all-empty"><span aria-hidden="true">◇</span><h2>No listings yet</h2><p>Items you post will appear here so you can review their availability.</p><a class="primary" href="marketplace.html?sell=1">List your first item</a></div>`;
+    listingHost.innerHTML = `<div class="profile-all-empty"><span aria-hidden="true">◇</span><h2>No listings yet</h2><p>Items you post will appear here so you can review their availability.</p><a class="primary" href="marketplace.php?sell=1">List your first item</a></div>`;
     return;
   }
   if (!items.length) {
