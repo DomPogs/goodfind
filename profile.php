@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="stylesheet" href="assets/css/styles.css?v=multi-photo-3">
 <link rel="stylesheet" href="assets/css/theme.css?v=dark-9">
-<link rel="stylesheet" href="assets/css/design-refresh.css?v=visual-refresh-2026-11">
+<link rel="stylesheet" href="assets/css/design-refresh.css?v=header-controls-4">
 <script src="assets/js/theme.js?v=dark-4"></script>
 </head>
 <body class="profile-page-body">

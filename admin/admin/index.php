@@ -8,7 +8,7 @@
 <link rel="icon" type="image/jpeg" href="../photos/you%20find%20icon.jpg">
 <link rel="stylesheet" href="../assets/css/styles.css?v=multi-photo-2">
 <link rel="stylesheet" href="admin.css?v=design-1">
-<link rel="stylesheet" href="../assets/css/design-refresh.css?v=visual-refresh-2026-11">
+<link rel="stylesheet" href="../assets/css/design-refresh.css?v=header-controls-4">
 </head>
 <body class="admin-page">
 <header class="admin-topbar"><a class="logo" href="../marketplace.php"><span class="logo-mark">↗</span>YouFind</a><div class="admin-topright"><span class="preview-chip">UI PREVIEW</span><button class="admin-user" type="button"><span class="admin-user-avatar">A</span><span>Administrator<small>Preview account</small></span></button></div></header>

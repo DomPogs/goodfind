@@ -791,3 +791,21 @@ html[data-theme="dark"] .authformside .field input,html[data-theme="dark"] .auth
 html[data-theme="dark"] .profile-all-listing-image{background:#203743}
 @media(max-width:720px){.orders-page-shell,.profile-page-shell{width:calc(100% - 32px)}.profile-identity-card{padding:17px}.authlayout{border-radius:20px}.authstory::after{right:-120px;bottom:-180px}}
 @media(prefers-reduced-motion:reduce){.orders-page-content .order-card,.orders-page-content .managed-listing,.profile-all-listing-card{transition:none}}
+
+/* Show the selected desktop destination with an underline only. */
+.topbar .navlinks a.active{border-radius:0;background:transparent;color:#fff;box-shadow:none}
+.topbar .navlinks a.active::after{display:block;right:10px;bottom:0;left:10px;height:3px;background:#d8e9b8}
+.topbar .navlinks a:not(.active):hover{border-radius:10px;background:#ffffff24;color:#fff}
+html[data-theme="dark"] .topbar .navlinks a.active{background:transparent;color:#fff;box-shadow:none}
+html[data-theme="dark"] .topbar .navlinks a.active::after{background:#a9cfdb}
+html[data-theme="dark"] .topbar .navlinks a:not(.active):hover{background:#ffffff18;color:#fff}
+
+/* Quiet, aligned utility controls on the orders and profile headers. */
+.orders-page-body .topbar .theme-toggle,.profile-page-body .topbar .theme-toggle{width:38px;height:38px;border-radius:50%;border-color:#ffffff42;background:#ffffff12;color:#fff}
+.orders-page-body .topbar .theme-toggle:hover,.profile-page-body .topbar .theme-toggle:hover{border-color:#ffffff80;background:#ffffff22}
+.topbar .authnav.orders-back-link,.topbar .authnav.profile-market-link{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 8px;border:0;border-radius:9px;background:transparent;color:#f2f7f2;font-size:12px;font-weight:650;text-decoration:none;box-shadow:none}
+.topbar .authnav.orders-back-link::before,.topbar .authnav.profile-market-link::before{content:"←";font-size:16px;font-weight:500;line-height:1}
+.topbar .authnav.orders-back-link:hover,.topbar .authnav.profile-market-link:hover{background:#ffffff18;color:#fff;transform:none;box-shadow:none}
+html[data-theme="dark"] .orders-page-body .topbar .theme-toggle,html[data-theme="dark"] .profile-page-body .topbar .theme-toggle{border-color:#95bccc66;background:#ffffff0c;color:#e3edf2}
+html[data-theme="dark"] .topbar .authnav.orders-back-link,html[data-theme="dark"] .topbar .authnav.profile-market-link{background:transparent;color:#e3edf2}
+html[data-theme="dark"] .topbar .authnav.orders-back-link:hover,html[data-theme="dark"] .topbar .authnav.profile-market-link:hover{background:#ffffff18;color:#fff}
