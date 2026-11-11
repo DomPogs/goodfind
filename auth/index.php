@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../assets/css/styles.css?v=multi-photo-3">
 <link rel="stylesheet" href="auth.css?v=id-upload-1">
 <link rel="stylesheet" href="../assets/css/theme.css?v=dark-9">
-<link rel="stylesheet" href="../assets/css/design-refresh.css?v=scroll-stable-1">
+<link rel="stylesheet" href="../assets/css/design-refresh.css?v=visual-refresh-2026-11">
 <script src="../assets/js/theme.js?v=dark-4"></script>
 </head>
 <body>

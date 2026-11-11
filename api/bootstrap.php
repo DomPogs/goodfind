@@ -136,11 +136,13 @@ function deriveScrypt(string $password, string $saltHex, int $n, int $r, int $p)
     if ($code !== 0 || strlen($derived) !== 64) fail(503, 'Password hashing failed. Check the XAMPP OpenSSL SCRYPT support.');
     return $derived;
 }
-function stripeReady(): int {
+function stripeConfigured(): bool {
     $bps=setting('PLATFORM_FEE_BPS');
-    if (!setting('STRIPE_SECRET_KEY') || !setting('STRIPE_WEBHOOK_SECRET')) fail(503, 'Payments are not configured yet. Add Stripe test keys and restart Apache.');
-    if ($bps === '' || !ctype_digit($bps) || (int)$bps > 10000) fail(503, 'Set PLATFORM_FEE_BPS between 0 and 10000 before enabling checkout.');
-    return (int)$bps;
+    return (bool)setting('STRIPE_SECRET_KEY') && (bool)setting('STRIPE_WEBHOOK_SECRET') && $bps !== '' && ctype_digit($bps) && (int)$bps <= 10000;
+}
+function stripeReady(): int {
+    if (!stripeConfigured()) fail(503, 'Online checkout is not configured yet. Set the Stripe keys and platform fee before enabling payments.');
+    return (int)setting('PLATFORM_FEE_BPS');
 }
 function stripeCall(string $method, string $endpoint, array $params = []): array {
     if (!function_exists('curl_init')) fail(503, 'The PHP cURL extension is required for Stripe payments.');

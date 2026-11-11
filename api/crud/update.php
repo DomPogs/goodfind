@@ -2,6 +2,16 @@
 declare(strict_types=1);
 // {update}: {System.Collections.Hashtable[update]} route handlers.
 
+    if ($method==='PATCH' && preg_match('#^/api/admin/accounts/(\d+)$#',$route,$match)) {
+        $actor=requireAdmin($route);$id=(int)$match[1];$data=$getBody();$wanted=$data['role']??'';
+        if(!in_array($wanted,['member','admin'],true))fail(400,'Choose Member or Administrator access.');
+        if($id===(int)$actor['id'])fail(409,'You cannot change your own administrator access.');
+        $account=row('SELECT id,role FROM users WHERE id=?',[$id]);if(!$account)fail(404,'Account not found.');
+        $role=$wanted==='admin'?'admin':'buyer';
+        if($account['role']==='admin'&&$role!=='admin'&&(int)row("SELECT COUNT(*) total FROM users WHERE role='admin'")['total']<=1)fail(409,'Goodfind must keep at least one administrator account.');
+        runSql('UPDATE users SET role=? WHERE id=?',[$role,$id]);answer(200,['id'=>$id,'role'=>$wanted]);
+    }
+
     if ($method==='PATCH' && preg_match('#^/api/admin/verifications/(\d+)$#',$route,$match)) {
         requireAdmin($route); $data=$getBody(); if (!in_array($data['status']??'', ['verified','rejected'], true)) fail(400,'Choose verified or rejected.'); $id=(int)$match[1];
         transaction(static function() use($data,$id){$result=runSql("UPDATE users SET id_verification_status=?,id_photo_data=NULL WHERE id=? AND id_verification_status='pending'",[$data['status'],$id]);if(!$result['changes'])fail(404,'Pending ID verification not found.');runSql('UPDATE listings SET verified=? WHERE seller_id=?',[$data['status']==='verified'?1:0,$id]);});

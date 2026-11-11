@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // {read}: {System.Collections.Hashtable[read]} route handlers.
 
-    if ($method==='GET' && $route==='/api/health') answer(200,['ok'=>true,'paymentsConfigured'=>(bool)(setting('STRIPE_SECRET_KEY')&&setting('STRIPE_WEBHOOK_SECRET')),'storage'=>'mysql','runtime'=>'php']);
+    if ($method==='GET' && $route==='/api/health') answer(200,['ok'=>true,'paymentsConfigured'=>stripeConfigured(),'storage'=>'mysql','runtime'=>'php']);
 
 
     if ($method==='GET' && $route==='/api/admin/me') { $user=requestUser($route); answer(200,['user'=>($user && $user['role']==='admin')?safeUser($user):null]); }
@@ -13,6 +13,12 @@ declare(strict_types=1);
         $counts['pendingVerifications']=(int)row("SELECT COUNT(*) n FROM users WHERE id_verification_status='pending'")['n'];
         $list=rows("SELECT l.*,c.category_name FROM listings l LEFT JOIN categories c USING(category_id) WHERE l.status IN ('pending','active','hidden','rejected','reserved','sold','traded') ORDER BY CASE WHEN l.status='pending' THEN 0 ELSE 1 END,l.created_at DESC LIMIT 200");
         answer(200,['counts'=>$counts,'listings'=>array_map('publicListing',$list)]);
+    }
+
+    if ($method==='GET' && $route==='/api/admin/accounts') {
+        requireAdmin($route);
+        $accounts=rows("SELECT id,full_name,email,school_id,role,id_verification_status,created_at FROM users ORDER BY created_at DESC,id DESC LIMIT 500");
+        answer(200,['accounts'=>array_map(static fn($account)=>['id'=>(int)$account['id'],'name'=>$account['full_name'],'email'=>$account['email'],'schoolId'=>$account['school_id'],'role'=>$account['role'],'verification'=>$account['id_verification_status'],'createdAt'=>$account['created_at']],$accounts)]);
     }
 
     if ($method==='GET' && $route==='/api/admin/verifications') {
@@ -53,7 +59,7 @@ declare(strict_types=1);
             EXISTS(SELECT 1 FROM reviews r WHERE r.order_id=o.id AND r.reviewer_id=?) has_review
             FROM orders o JOIN listings l ON l.id=o.listing_id JOIN users b ON b.id=o.buyer_id JOIN users s ON s.id=o.seller_id WHERE o.buyer_id=? OR o.seller_id=? ORDER BY o.order_date DESC,o.id DESC",[$id,$id,$id]);
         $reviewMap=[];if($list){$ids=array_map(static fn($o)=>(int)$o['id'],$list);$marks=implode(',',array_fill(0,count($ids),'?'));$reviews=rows("SELECT r.order_id,r.reviewer_id,r.rating,r.remarks,r.created_at,u.display_name reviewer_name FROM reviews r JOIN users u ON u.id=r.reviewer_id WHERE r.order_id IN ({$marks}) ORDER BY r.created_at",$ids);foreach($ids as $reviewId)$reviewMap[$reviewId]=[];foreach($reviews as $r)$reviewMap[(int)$r['order_id']][]=['reviewerId'=>(int)$r['reviewer_id'],'reviewerName'=>$r['reviewer_name'],'rating'=>(int)$r['rating'],'remarks'=>$r['remarks'],'createdAt'=>$r['created_at']];}
-        $paymentsConfigured=(bool)(setting('STRIPE_SECRET_KEY')&&setting('STRIPE_WEBHOOK_SECRET'));
+        $paymentsConfigured=stripeConfigured();
         $orders=array_map(static function($o)use($id,$reviewMap,$paymentsConfigured){$seller=(int)$o['seller_id']===$id;return ['id'=>(int)$o['id'],'listingId'=>(int)$o['listing_id'],'buyerId'=>(int)$o['buyer_id'],'sellerId'=>(int)$o['seller_id'],'buyerName'=>$o['buyer_name'],'sellerName'=>$o['seller_name'],'otherName'=>$seller?$o['buyer_name']:$o['seller_name'],'myRole'=>$seller?'seller':'buyer','itemTitle'=>$o['title'],'itemStatus'=>$o['listing_status'],'itemPhoto'=>$o['photo_data']?:null,'itemEmoji'=>$o['emoji'],'itemArt'=>$o['art'],'date'=>$o['order_date'],'queueStatus'=>$o['queue_status'],'queuePosition'=>$o['queue_position']===null?null:(int)$o['queue_position'],'status'=>$o['status'],'amount'=>(float)$o['amount_cents']/100,'currency'=>$o['currency'],'hasReviewed'=>(bool)$o['has_review'],'reviews'=>$reviewMap[(int)$o['id']]??[],'hasPaymentSession'=>(bool)$o['stripe_session_id'],'paymentReady'=>$paymentsConfigured&&(bool)$o['seller_stripe_account']&&(bool)$o['seller_charges_enabled']&&(bool)$o['seller_payouts_enabled']];},$list);
         $items=rows("SELECT l.id,l.title,l.status,l.price_cents,(SELECT COUNT(*) FROM orders o WHERE o.listing_id=l.id AND o.queue_status='queued') queued_count,(SELECT COUNT(*) FROM orders o WHERE o.listing_id=l.id AND o.queue_status='approved') approved_count FROM listings l WHERE l.seller_id=? AND l.status<>'deleted' ORDER BY l.created_at DESC",[$id]);
         answer(200,['orders'=>$orders,'myListings'=>array_map(static fn($x)=>['id'=>(int)$x['id'],'title'=>$x['title'],'status'=>$x['status'],'price'=>(float)$x['price_cents']/100,'queuedCount'=>(int)$x['queued_count'],'approvedCount'=>(int)$x['approved_count']],$items)]);

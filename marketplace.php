@@ -9,7 +9,7 @@
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
  <link rel="stylesheet" href="assets/css/styles.css?v=multi-photo-3">
  <link rel="stylesheet" href="assets/css/theme.css?v=dark-9">
- <link rel="stylesheet" href="assets/css/design-refresh.css?v=banner-3">
+ <link rel="stylesheet" href="assets/css/design-refresh.css?v=visual-refresh-2026-11">
  <script src="assets/js/theme.js?v=dark-4"></script>
 </head>
 <body>
