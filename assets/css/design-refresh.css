@@ -809,3 +809,36 @@ html[data-theme="dark"] .topbar .navlinks a:not(.active):hover{background:#fffff
 html[data-theme="dark"] .orders-page-body .topbar .theme-toggle,html[data-theme="dark"] .profile-page-body .topbar .theme-toggle{border-color:#95bccc66;background:#ffffff0c;color:#e3edf2}
 html[data-theme="dark"] .topbar .authnav.orders-back-link,html[data-theme="dark"] .topbar .authnav.profile-market-link{background:transparent;color:#e3edf2}
 html[data-theme="dark"] .topbar .authnav.orders-back-link:hover,html[data-theme="dark"] .topbar .authnav.profile-market-link:hover{background:#ffffff18;color:#fff}
+
+/* Keep the sign-in story legible and prevent the form from being clipped on narrow screens. */
+.authmain{width:100%;min-width:0;box-sizing:border-box;overflow-x:clip}
+.authlayout{width:min(1040px,100%);min-width:0;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.authstory,.authformside{min-width:0}
+.authstory{background:linear-gradient(145deg,#173c2b,#1f6445 68%,#347a55);color:#fff}
+.authstory .eyebrow{color:#dcedb8}
+.authstory h1{color:#fff}
+.authstory h1 span{color:#d4ef91}
+.authstory p{color:#e0ebe3}
+.authquote{border-color:#ffffff45;background:#ffffff14;color:#eef5ef}
+.authquote strong{color:#fff}
+@media(max-width:900px){
+  .authmain{padding:24px 16px}
+  .authlayout{width:min(680px,100%);grid-template-columns:minmax(0,1fr);min-height:0}
+  .authstory{min-height:240px;padding:32px}
+  .authstory h1{font-size:clamp(31px,6vw,42px)}
+  .authquote{display:none}
+  .authformside{padding:32px clamp(24px,7vw,52px)}
+}
+@media(max-width:460px){
+  .authmain{padding:16px 10px}
+  .authlayout{border-radius:19px}
+  .authstory{min-height:0;padding:26px 23px}
+  .authstory h1{font-size:32px;letter-spacing:-1.3px}
+  .authstory p{font-size:12px}
+  .authformside{padding:26px 21px 30px}
+}
+html[data-theme="dark"] .authstory{background:linear-gradient(145deg,#203b45,#2b4c59)}
+html[data-theme="dark"] .authstory h1,html[data-theme="dark"] .authquote strong{color:#e2edf1}
+html[data-theme="dark"] .authstory h1 span{color:#b8d8e2}
+html[data-theme="dark"] .authstory p,html[data-theme="dark"] .authquote{color:#d1e2e8}
+html[data-theme="dark"] .authquote{border-color:#95bccc55;background:#132832}

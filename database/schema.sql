@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(254) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',
+  account_status ENUM('active','restricted') NOT NULL DEFAULT 'active',
   stripe_account_id VARCHAR(128) NULL,
   stripe_charges_enabled TINYINT(1) NOT NULL DEFAULT 0,
   stripe_payouts_enabled TINYINT(1) NOT NULL DEFAULT 0,

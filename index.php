@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="stylesheet" href="assets/css/landing.css?v=landing-5">
 <link rel="stylesheet" href="assets/css/theme.css?v=dark-10">
-<link rel="stylesheet" href="assets/css/design-refresh.css?v=header-controls-4">
+<link rel="stylesheet" href="assets/css/design-refresh.css?v=auth-layout-fix-1">
 <script src="assets/js/theme.js?v=dark-4"></script>
 </head>
 <body>

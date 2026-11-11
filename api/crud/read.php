@@ -17,8 +17,8 @@ declare(strict_types=1);
 
     if ($method==='GET' && $route==='/api/admin/accounts') {
         requireAdmin($route);
-        $accounts=rows("SELECT id,full_name,email,school_id,role,id_verification_status,created_at FROM users ORDER BY created_at DESC,id DESC LIMIT 500");
-        answer(200,['accounts'=>array_map(static fn($account)=>['id'=>(int)$account['id'],'name'=>$account['full_name'],'email'=>$account['email'],'schoolId'=>$account['school_id'],'role'=>$account['role'],'verification'=>$account['id_verification_status'],'createdAt'=>$account['created_at']],$accounts)]);
+        $accounts=rows("SELECT id,full_name,email,school_id,role,account_status,id_verification_status,created_at FROM users ORDER BY created_at DESC,id DESC LIMIT 500");
+        answer(200,['accounts'=>array_map(static fn($account)=>['id'=>(int)$account['id'],'name'=>$account['full_name'],'email'=>$account['email'],'schoolId'=>$account['school_id'],'role'=>$account['role'],'status'=>$account['account_status'],'verification'=>$account['id_verification_status'],'createdAt'=>$account['created_at']],$accounts)]);
     }
 
     if ($method==='GET' && $route==='/api/admin/verifications') {

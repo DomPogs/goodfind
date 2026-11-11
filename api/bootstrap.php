@@ -35,6 +35,15 @@ function db(): PDO {
 }
 function rows(string $sql, array $params = []): array { $stmt = db()->prepare($sql); $stmt->execute($params); return $stmt->fetchAll(); }
 function row(string $sql, array $params = []): ?array { $stmt = db()->prepare($sql); $stmt->execute($params); $value = $stmt->fetch(); return $value === false ? null : $value; }
+function ensureAccountRestrictionSchema(): void {
+    if (row("SHOW COLUMNS FROM users LIKE 'account_status'")) return;
+    try {
+        db()->exec("ALTER TABLE users ADD COLUMN account_status ENUM('active','restricted') NOT NULL DEFAULT 'active' AFTER role");
+    } catch (PDOException $error) {
+        // Another request may have applied this one-time upgrade at the same time.
+        if (!row("SHOW COLUMNS FROM users LIKE 'account_status'")) throw $error;
+    }
+}
 function debugLog(string $event, array $context = []): void {
     if (setting('APP_DEBUG') !== '1') return;
     $record = ['time'=>gmdate('c'),'event'=>$event,'request_id'=>$GLOBALS['requestId'] ?? null] + $context;
@@ -79,7 +88,7 @@ function validImage($value, string $label): string {
 function safeUser(?array $user): ?array {
     if (!$user) return null;
     return ['id'=>(int)$user['id'],'schoolId'=>$user['school_id'],'displayName'=>$user['full_name'] ?: $user['display_name'],'contactNo'=>$user['contact_no'],'profilePhoto'=>$user['profile_photo'] ?: null,
-        'idVerificationStatus'=>$user['id_verification_status'] ?: 'unsubmitted','email'=>$user['email'],'role'=>$user['role'] ?: 'buyer','payoutsConnected'=>(bool)$user['stripe_charges_enabled'] && (bool)$user['stripe_payouts_enabled'],'createdAt'=>$user['created_at']];
+        'idVerificationStatus'=>$user['id_verification_status'] ?: 'unsubmitted','email'=>$user['email'],'role'=>$user['role'] ?: 'buyer','accountStatus'=>$user['account_status'] ?? 'active','payoutsConnected'=>(bool)$user['stripe_charges_enabled'] && (bool)$user['stripe_payouts_enabled'],'createdAt'=>$user['created_at']];
 }
 function publicListing(array $item, bool $includePhotos = false, ?array $photos = null): array {
     $gallery = $photos ?? (!empty($item['photo_data']) ? [$item['photo_data']] : []);
@@ -92,7 +101,8 @@ function publicListing(array $item, bool $includePhotos = false, ?array $photos 
 function requestUser(string $route): ?array {
     $admin = str_starts_with($route, '/api/admin/'); $name = $admin ? 'goodfind_admin_session' : 'goodfind_session'; $token = $_COOKIE[$name] ?? '';
     if (!$token) return null;
-    return row('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?', [hash('sha256', $token), (int)round(microtime(true) * 1000)]);
+    $user=row('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?', [hash('sha256', $token), (int)round(microtime(true) * 1000)]);
+    return $user && ($user['account_status'] ?? 'active') !== 'restricted' ? $user : null;
 }
 function requireUser(string $route): array { $user = requestUser($route); if (!$user) fail(401, 'Sign in to continue.'); return $user; }
 function requireVerified(string $route): array { $user=requireUser($route); if ($user['role'] !== 'admin' && $user['id_verification_status'] !== 'verified') fail(403, 'Verify your school ID before listing, ordering, or trading.'); return $user; }
@@ -158,6 +168,7 @@ $requestStarted=microtime(true);
 $route=(string)($_GET['route'] ?? '');
 $method=strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 try {
+    ensureAccountRestrictionSchema();
     $configuredAdmin=strtolower(trim(setting('ADMIN_EMAIL')));
     if ($configuredAdmin!=='') runSql("UPDATE users SET role='admin' WHERE email=? AND role<>'admin'",[$configuredAdmin]);
     if ($method !== 'GET' && $route !== '/api/payments/stripe-webhook') sameOrigin();

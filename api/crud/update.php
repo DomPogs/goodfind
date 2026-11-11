@@ -3,13 +3,20 @@ declare(strict_types=1);
 // {update}: {System.Collections.Hashtable[update]} route handlers.
 
     if ($method==='PATCH' && preg_match('#^/api/admin/accounts/(\d+)$#',$route,$match)) {
-        $actor=requireAdmin($route);$id=(int)$match[1];$data=$getBody();$wanted=$data['role']??'';
-        if(!in_array($wanted,['member','admin'],true))fail(400,'Choose Member or Administrator access.');
-        if($id===(int)$actor['id'])fail(409,'You cannot change your own administrator access.');
-        $account=row('SELECT id,role FROM users WHERE id=?',[$id]);if(!$account)fail(404,'Account not found.');
-        $role=$wanted==='admin'?'admin':'buyer';
-        if($account['role']==='admin'&&$role!=='admin'&&(int)row("SELECT COUNT(*) total FROM users WHERE role='admin'")['total']<=1)fail(409,'Goodfind must keep at least one administrator account.');
-        runSql('UPDATE users SET role=? WHERE id=?',[$role,$id]);answer(200,['id'=>$id,'role'=>$wanted]);
+        $actor=requireAdmin($route);$id=(int)$match[1];$data=$getBody();
+        if($id===(int)$actor['id'])fail(409,'You cannot restrict or change your own administrator account.');
+        $account=row('SELECT id,role,account_status FROM users WHERE id=?',[$id]);if(!$account)fail(404,'Account not found.');
+        if(array_key_exists('accountStatus',$data)){
+            $wantedStatus=$data['accountStatus'];if(!in_array($wantedStatus,['active','restricted'],true))fail(400,'Choose Active or Restricted account status.');
+            if($account['account_status']===$wantedStatus)answer(200,['id'=>$id,'status'=>$wantedStatus]);
+            if($wantedStatus==='restricted'&&$account['role']==='admin'&&(int)row("SELECT COUNT(*) total FROM users WHERE role='admin' AND account_status='active'")['total']<=1)fail(409,'Goodfind must keep at least one active administrator account.');
+            transaction(static function()use($id,$wantedStatus){runSql('UPDATE users SET account_status=? WHERE id=?',[$wantedStatus,$id]);if($wantedStatus==='restricted')runSql('DELETE FROM sessions WHERE user_id=?',[$id]);});
+            answer(200,['id'=>$id,'status'=>$wantedStatus]);
+        }
+        $wantedRole=$data['role']??'';if(!in_array($wantedRole,['member','admin'],true))fail(400,'Choose Member or Administrator access.');
+        $role=$wantedRole==='admin'?'admin':'buyer';
+        if($account['role']==='admin'&&$role!=='admin'&&$account['account_status']==='active'&&(int)row("SELECT COUNT(*) total FROM users WHERE role='admin' AND account_status='active'")['total']<=1)fail(409,'Goodfind must keep at least one active administrator account.');
+        runSql('UPDATE users SET role=? WHERE id=?',[$role,$id]);answer(200,['id'=>$id,'role'=>$wantedRole]);
     }
 
     if ($method==='PATCH' && preg_match('#^/api/admin/verifications/(\d+)$#',$route,$match)) {

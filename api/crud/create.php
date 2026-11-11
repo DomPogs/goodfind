@@ -19,7 +19,7 @@ declare(strict_types=1);
     if ($method==='POST' && ($route==='/api/auth/login'||$route==='/api/admin/login')) {
         $data=$getBody();$email=strtolower(textValue($data['email']??null,254,'Email'));$password=textValue($data['password']??null,200,'Password');$user=row('SELECT * FROM users WHERE email=?',[$email]);$parts=$user?explode('$',$user['password_hash']):[];$matches=false;
         if(count($parts)===6&&$parts[0]==='scrypt'){$derived=deriveScrypt($password,$parts[4],(int)$parts[1],(int)$parts[2],(int)$parts[3]);$matches=hash_equals(strtolower($parts[5]),bin2hex($derived));}
-        if(!$matches)fail(401,'Email or password is incorrect.');$admin=$route==='/api/admin/login';if($admin&&$user['role']!=='admin')fail(403,'This account does not have admin access.');if(!$admin&&$user['role']==='admin')fail(403,'Administrators must sign in from the dedicated admin login page.');setSession($user,$admin);answer(200,['user'=>safeUser($user)]);
+        if(!$matches)fail(401,'Email or password is incorrect.');if(($user['account_status']??'active')==='restricted')fail(403,'This account is restricted. Contact a Goodfind administrator.');$admin=$route==='/api/admin/login';if($admin&&$user['role']!=='admin')fail(403,'This account does not have admin access.');if(!$admin&&$user['role']==='admin')fail(403,'Administrators must sign in from the dedicated admin login page.');setSession($user,$admin);answer(200,['user'=>safeUser($user)]);
     }
 
     if ($method==='POST' && ($route==='/api/auth/logout'||$route==='/api/admin/logout')) { clearSession($route); answer(200,['ok'=>true]); }
